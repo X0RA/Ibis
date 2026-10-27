@@ -1,0 +1,14 @@
+import { ToolButton } from "tool-button.slint";
+import { Theme } from "../theme.slint";
+import { Icons } from "../icons.slint";
+export component IntervalControl inherits Rectangle {
+    in-out property <int> value:5;
+    width:96px;height:28px;border-radius:6px;border-width:1px;border-color:Theme.control-border;background:Theme.raised;
+    HorizontalLayout { spacing:0px;
+        ToolButton { width:28px;icon-only:true;icon:Icons.minus;label:"Shorter slideshow interval";enabled:root.value>1;clicked=>{root.value=max(1,root.value - 1);} }
+        TextInput { min-width:0px;horizontal-stretch:1;text:root.value;color:Theme.foreground;font-size:12px;horizontal-alignment:center;vertical-alignment:center;single-line:true;input-type:number;accessible-label:"Slideshow interval seconds";
+            accepted=>{root.value=clamp(round(self.text.to-float()),1,300);self.text=root.value;}
+        }
+        ToolButton { width:28px;icon-only:true;icon:Icons.plus;label:"Longer slideshow interval";enabled:root.value<300;clicked=>{root.value=min(300,root.value + 1);} }
+    }
+}

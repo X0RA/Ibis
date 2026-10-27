@@ -1,0 +1,14 @@
+import "../fonts/Inter.ttf";
+import { SegmentedControl } from "../components/segmented-control.slint";
+import { Icons } from "../icons.slint";
+import { Theme } from "../theme.slint";
+export component SegmentedControlPreview inherits Window {
+    width:320px;height:260px;default-font-family:"Inter";background:Theme.background;
+    VerticalLayout { padding:16px;spacing:12px;alignment:start;
+        SegmentedControl { options:["All","Photos","Videos","RAW"];current-index:0; }
+        SegmentedControl { options:["All","Photos","Videos","RAW"];current-index:1; }
+        SegmentedControl { options:["All","Photos","Videos","RAW"];current-index:3; }
+        SegmentedControl { options:["Grid","List"];icons:[Icons.grid,Icons.list];icon-only:true;current-index:0; }
+        SegmentedControl { options:["Grid","List"];icons:[Icons.grid,Icons.list];icon-only:true;current-index:1; }
+    }
+}

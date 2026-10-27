@@ -1,0 +1,36 @@
+import { ToolButton } from "tool-button.slint";
+import { Icons } from "../icons.slint";
+import { Theme } from "../theme.slint";
+export component Choice inherits Rectangle {
+    in property <[string]> model;
+    in-out property <int> current-index;
+    in property <string> label;
+    in property <image> icon;
+    in property <string> suffix;
+    in property <bool> active;
+    callback selected(int);
+    private property <int> cursor;
+    height:28px;min-width:button.min-width + 16px;preferred-width:self.min-width;horizontal-stretch:0;
+    forward-focus:button;
+    accessible-role:combobox;accessible-label:root.label;accessible-value:root.model[root.current-index] + root.suffix;
+    function choose(index:int){root.current-index=index;root.selected(index);popup.close();}
+    button := ToolButton { width:parent.width;height:parent.height;chip:true;active:root.active;icon:root.icon;text:root.model[root.current-index]+root.suffix;align-left:true;clicked=>{root.cursor=root.current-index;popup.show();} }
+    Image { x:parent.width - 18px;y:8px;width:12px;height:12px;source:Icons.chevron;colorize:Theme.muted; }
+    popup := PopupWindow {
+        y:root.height + 4px;width:max(root.width,170px);height:root.model.length * 32px + 8px;
+        forward-focus:menu-focus;
+        Rectangle { background:Theme.raised;border-radius:6px;border-width:1px;border-color:Theme.control-border; }
+        menu-focus := FocusScope {
+            key-pressed(event)=>{
+                if event.text==Key.UpArrow {root.cursor=max(0,root.cursor - 1);return accept;}
+                if event.text==Key.DownArrow {root.cursor=min(root.model.length - 1,root.cursor + 1);return accept;}
+                if event.text==Key.Return {root.choose(root.cursor);return accept;}
+                if event.text==Key.Escape {popup.close();return accept;}
+                return reject;
+            }
+            VerticalLayout { padding:4px;spacing:0px;
+                for option[index] in root.model: ToolButton { text:option;height:32px;active:index==root.cursor;align-left:true;horizontal-stretch:1;clicked=>{root.choose(index);} }
+            }
+        }
+    }
+}

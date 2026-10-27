@@ -1,0 +1,28 @@
+import { ListColumns } from "../list-columns.slint";
+import { Theme } from "../theme.slint";
+import { ImageRow } from "../media-types.slint";
+export component ImageListRow inherits Rectangle {
+    in property <ImageRow> image;
+    in property <bool> alternate;
+    in property <bool> selected;
+    in property <bool> show-source;
+    callback activated();
+    height:44px;border-radius:6px;
+    background:root.selected ? Theme.selected : hover.has-hover || focus.has-focus ? Theme.raised : transparent;
+    accessible-role:list-item;accessible-label:root.image.name + ", " + root.image.date + ", " + root.image.source;
+    forward-focus:focus;
+    HorizontalLayout { padding-left:12px;padding-right:12px;spacing:16px;
+        Rectangle { width:44px;
+            Rectangle { y:6px;width:44px;height:32px;border-radius:4px;clip:true;background:Theme.button;
+            Image { width:parent.width;height:parent.height;source:root.image.thumbnail;image-fit:root.image.video ? contain : cover;transform-rotation:root.image.rotation * 90deg;opacity:root.image.rejected ? 0.4 : 1; }
+            }
+        }
+        Text { min-width:40px;horizontal-stretch:1;text:root.image.name;color:root.image.rejected ? Theme.secondary : Theme.foreground;font-size:13px;vertical-alignment:center;overflow:elide; }
+        Text { width:ListColumns.type-width(root.width);text:root.image.paired ? "JPEG + RAW" : root.image.format + (root.image.duration!="" ? " · " + root.image.duration : "");color:Theme.secondary;font-size:12px;vertical-alignment:center;overflow:elide; }
+        Text { width:ListColumns.date-width(root.width);text:root.image.date;color:Theme.secondary;font-size:12px;vertical-alignment:center;overflow:elide; }
+        if root.show-source: Text { width:ListColumns.source-width(root.width);text:root.image.source;color:Theme.secondary;font-size:12px;vertical-alignment:center;overflow:elide; }
+        Text { width:80px;text:root.image.rejected ? "Rejected" : root.image.rating==0 ? "—" : (root.image.rating==1 ? "★" : root.image.rating==2 ? "★★" : root.image.rating==3 ? "★★★" : root.image.rating==4 ? "★★★★" : "★★★★★");color:root.image.rejected ? Theme.danger : root.image.rating==0 ? Theme.muted : Theme.foreground;font-size:12px;vertical-alignment:center; }
+    }
+    focus := FocusScope { key-pressed(event)=>{if event.text==Key.Return || event.text==" "{root.activated();return accept;}return reject;} }
+    hover := TouchArea { mouse-cursor:pointer;clicked=>{focus.focus();root.activated();} }
+}

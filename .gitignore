@@ -1,0 +1,47 @@
+# Rust build output and locally downloaded/native build dependencies.
+/target/
+/dist/
+/deps/
+/vcpkg_installed/
+# Keep Cargo.lock: this is an application, and CI uses --locked.
+
+# Local caches, scratch files and private development notes/samples.
+/.cache/
+/tmp/
+/_test_files/
+/md/
+/.serena/
+/.agents/
+/.codex/
+/.aws/
+
+# Local environment/configuration and credentials (examples may be committed).
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+/.config/
+/settings.json
+/.cargo/credentials
+/.cargo/credentials.toml
+
+# Editor/OS leftovers and Python script caches.
+/.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+__pycache__/
+*.py[cod]
+.venv/
+*.log
+
+# Generated macOS packaging icon; PNG masters and Windows ICO are source assets.
+/ui/assets/appicon.icns
+
+# Intentionally included: .github/, AGENTS.md, scripts/, packaging/, ui/assets/,
+# and all public fixtures in test_images/. Do not ignore media extensions globally.

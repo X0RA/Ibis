@@ -1,0 +1,35 @@
+import { ToolButton } from "tool-button.slint";
+import { Theme } from "../theme.slint";
+
+export component SegmentedControl inherits Rectangle {
+    in property <[string]> options;
+    in property <[image]> icons;
+    in property <bool> icon-only;
+    in property <string> label-prefix;
+    in-out property <int> current-index;
+    callback selected(int);
+    height:28px;
+    min-width:root.icon-only ? root.options.length * 32px + 2px : segments.min-width + 2px;
+    preferred-width:self.min-width;
+    horizontal-stretch:0;
+    background:Theme.raised;
+    border-radius:6px;
+    border-width:1px;
+    border-color:Theme.control-border;
+    clip:true;
+    segments := HorizontalLayout {
+        x:1px;y:1px;width:parent.width - 2px;height:parent.height - 2px;
+        spacing:0px;
+        for option[index] in root.options: ToolButton {
+            height:26px;
+            text:option;
+            icon:root.icons[index];
+            icon-only:root.icon-only;
+            label:root.label-prefix + option;
+            active:root.current-index==index;
+            border-radius:0px;
+            border-width:0px;
+            clicked=>{root.current-index=index;root.selected(index);}
+        }
+    }
+}

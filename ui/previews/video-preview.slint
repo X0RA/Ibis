@@ -1,0 +1,11 @@
+import "../fonts/Inter.ttf";
+import { VideoPage } from "../pages/video.slint";
+// The app keeps this page alive while switching to/from the photo viewer.
+export component VideoPreview inherits Window {
+    default-font-family:"Inter";
+    width: 1400px; height: 1000px;
+    VideoPage { x: 0px; y: 0px; width: 696px; height: 496px; media-title: "Holiday.mp4"; position: "2 / 24"; duration: 123; elapsed: 25; paused: true; seek(value) => { self.elapsed = value; } pause(value) => { self.paused = value; } can-previous: true; can-next: true; }
+    VideoPage { x: 704px; y: 0px; width: 696px; height: 496px; media-title: "A long video filename to check elision.MOV"; loading: true; position: "3 / 24"; can-next: true; can-previous: true; }
+    VideoPage { x: 0px; y: 504px; width: 696px; height: 496px; media-title: "Damaged.mkv"; error: "Could not play video: unsupported codec or damaged file"; position: "4 / 24"; can-previous: true; can-next: true; }
+    VideoPage { x: 704px; y: 504px; width: 696px; height: 496px; media-title: "Finished.webm"; ended: true; paused: true; elapsed: 3723; duration: 3723; muted: true; position: "24 / 24"; can-previous: true; }
+}

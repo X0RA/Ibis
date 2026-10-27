@@ -1,0 +1,10 @@
+import "../fonts/Inter.ttf";
+import { ImageListRow } from "../components/image-row.slint";
+export component ImageRowPreview inherits Window {
+    default-font-family:"Inter";
+    width: 1040px; height: 180px;
+    VerticalLayout {
+        ImageListRow { show-source: true; image: { name: "A very long filename from a camera with several descriptive labels.RAF", directory: "2026/Holiday/Day one", format: "RAF", date: "2026-10-27 12:30:00", source: "EXIF capture date", path: "/mock/photo.raf" }; }
+        ImageListRow { selected: true; alternate: true; image: { name: "Portrait.HEIC", directory: "—", format: "HEIC", date: "Unknown date", source: "Unknown", path: "/mock/photo.heic" }; }
+    }
+}

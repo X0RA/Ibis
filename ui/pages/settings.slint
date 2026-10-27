@@ -1,0 +1,30 @@
+import { Switch, ScrollView } from "std-widgets.slint";
+import { ToolButton } from "../components/tool-button.slint";
+import { Icons } from "../icons.slint";
+import { Theme } from "../theme.slint";
+export component SettingsPage inherits Rectangle {
+    in property <bool> write-metadata;
+    in property <bool> enabled:true;
+    in property <string> status;
+    callback change-mode(bool);
+    callback close();
+    background:Theme.background;
+    forward-focus:toggle;
+    init=>{toggle.focus();}
+    Rectangle { x:0px;y:0px;width:parent.width;height:48px;background:Theme.toolbar;
+        ToolButton { x:12px;y:10px;text:"Back";icon:Icons.back;clicked=>{root.close();} }
+        Text { x:100px;y:0px;height:parent.height;text:"Settings";color:Theme.foreground;font-size:16px;vertical-alignment:center; }
+    }
+    ScrollView { x:0px;y:48px;width:parent.width;height:parent.height - 48px;horizontal-scrollbar-policy:always-off;
+        content-height:body.height + 40px;content-width:self.visible-width;
+        body := VerticalLayout { x:24px;y:24px;width:min(640px,parent.width - 48px);height:self.preferred-height;spacing:18px;
+            Text { text:"Ratings and rejection";color:Theme.foreground;font-size:18px;font-weight:600; }
+            toggle := Switch { text:"Write ratings and rejection to file metadata";checked:root.write-metadata;enabled:root.enabled;toggled=>{root.change-mode(self.checked);self.checked=root.write-metadata;} }
+            Text { width:body.width;text:root.write-metadata ? "On: save directly inside supported files using embedded XMP metadata." : "Off: save in the app’s local JSON records. Original files stay unchanged.";wrap:word-wrap;color:Theme.secondary;font-size:13px; }
+            Text { width:body.width;text:"Changing this setting switches where ratings are read and saved. It does not copy existing ratings between JSON records and files.";wrap:word-wrap;color:Theme.muted;font-size:13px; }
+            Text { width:body.width;text:"File mode uses the standard XMP rating: 0–5 stars, or −1 for rejected. Rejecting replaces the star rating; removing rejection returns to unrated. Setting stars clears rejection.";wrap:word-wrap;color:Theme.secondary;font-size:13px; }
+            Text { width:body.width;text:"Writes run in the background through ExifTool. Unsupported or read-only files report an error. Rotation stays local and never changes your photo’s pixels.";wrap:word-wrap;color:Theme.muted;font-size:13px; }
+            Text { width:body.width;text:root.status;wrap:word-wrap;color:Theme.secondary;font-size:13px; }
+        }
+    }
+}

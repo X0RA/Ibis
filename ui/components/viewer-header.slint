@@ -1,0 +1,43 @@
+import { IntervalControl } from "interval-control.slint";
+import { ToolButton, Separator } from "tool-button.slint";
+import { Icons } from "../icons.slint";
+import { Theme } from "../theme.slint";
+export component ViewerHeader inherits Rectangle {
+    in property <string> title;
+    in property <string> position;
+    in property <string> kind;
+    in property <bool> can-previous;
+    in property <bool> can-next;
+    in property <bool> inspector;
+    in property <bool> slideshow;
+    in property <float> progress;
+    in-out property <int> seconds:5;
+    callback settings();
+    callback close();callback undo();callback toggle-slideshow();callback navigate(int);callback fullscreen();callback toggle-inspector();
+    height:48px;background:Theme.background;
+    HorizontalLayout { y:10px;height:28px;padding-left:12px;padding-right:12px;spacing:8px;
+        ToolButton { text:"Library";icon-only:root.width<760px;icon:Icons.back;clicked=>{root.close();} }
+        Separator { }
+        Text { min-width:0px;horizontal-stretch:1;text:root.title;color:Theme.foreground;font-size:13px;font-weight:500;vertical-alignment:center;overflow:elide; }
+        if root.kind!="" && root.width>1100px: Rectangle { width:kind-label.preferred-width + 12px;
+            Rectangle { y:5px;width:parent.width;height:18px;border-radius:4px;background:#1e2228;
+            kind-label := Text { x:6px;height:parent.height;text:root.kind;color:Theme.secondary;font-size:11px;vertical-alignment:center; }
+            }
+        }
+        Text { text:root.position;color:Theme.muted;font-size:12px;vertical-alignment:center; }
+        ToolButton { text:"Undo trash";label:"Undo trash";icon:Icons.undo;icon-only:root.width<950px;clicked=>{root.undo();} }
+        Separator { }
+        ToolButton { text:root.slideshow ? "Stop slideshow" : "Slideshow";label:root.slideshow ? "Stop slideshow" : "Slideshow";icon:root.slideshow ? Icons.pause : Icons.slideshow;icon-only:root.width<820px;active:root.slideshow;clicked=>{root.toggle-slideshow();} }
+        IntervalControl { value <=> root.seconds; }
+        Text { text:"s";color:Theme.muted;font-size:12px;vertical-alignment:center; }
+        Separator { }
+        previous-button := ToolButton { icon:Icons.left;icon-only:true;label:"Previous item";enabled:root.can-previous;clicked=>{root.navigate(-1);} }
+        next-button := ToolButton { icon:Icons.right;icon-only:true;label:"Next item";enabled:root.can-next;clicked=>{root.navigate(1);} }
+        Separator { }
+        ToolButton { icon:Icons.fullscreen;icon-only:true;label:"Fullscreen";clicked=>{root.fullscreen();} }
+        ToolButton { icon:Icons.settings;icon-only:true;label:"Settings";clicked=>{root.settings();} }
+        ToolButton { icon:Icons.inspector;icon-only:true;label:"Inspector";active:root.inspector;clicked=>{root.toggle-inspector();} }
+    }
+    Rectangle { y:parent.height - 1px;height:1px;background:Theme.border; }
+    if root.slideshow: Rectangle { y:parent.height - 2px;height:2px;width:parent.width * clamp(root.progress,0,1);background:Theme.accent; }
+}

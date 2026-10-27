@@ -1,0 +1,133 @@
+import { Spinner } from "std-widgets.slint";
+import { ToolButton, Separator } from "../components/tool-button.slint";
+import { Icons } from "../icons.slint";
+import { Theme } from "../theme.slint";
+
+export component ViewerPage inherits Rectangle {
+    in property <int> rotation;
+    in property <image> photo;
+    in property <float> photo-width;
+    in property <float> photo-height;
+    in property <float> photo-original-width;
+    in property <string> photo-title;
+    in property <string> position;
+    in property <string> status;
+    in property <string> error;
+    in property <bool> loading;
+    in-out property <bool> full-quality;
+    in property <bool> can-previous;
+    in property <bool> can-next;
+    in property <int> revision;
+    callback close();
+    callback escape();
+    callback toggle-fullscreen();
+    callback jump(bool);
+    callback navigate(int);
+    callback set-full-quality(bool);
+    private property <length> pixel: 1phx;
+    private property <bool> fit: true;
+    private property <float> zoom: 1;
+    private property <length> pan-x: 0px;
+    private property <length> pan-y: 0px;
+    private property <length> drag-x;
+    private property <length> drag-y;
+    private property <float> fit-scale: root.photo-width > 0 && root.photo-height > 0 ? min(1, min(viewport.width / root.pixel / (mod(root.rotation,2)==1 ? root.photo-height : root.photo-width), max(1, viewport.height / root.pixel) / (mod(root.rotation,2)==1 ? root.photo-width : root.photo-height))) : 1;
+    private property <float> scale: root.fit ? root.fit-scale : root.zoom;
+    private property <length> extent-x: max(0px, ((mod(root.rotation,2)==1 ? root.photo-height : root.photo-width) * root.scale * root.pixel - viewport.width) / 2);
+    private property <length> extent-y: max(0px, ((mod(root.rotation,2)==1 ? root.photo-width : root.photo-height) * root.scale * root.pixel - viewport.height) / 2);
+    function reset-view() { root.fit = true; root.pan-x = 0px; root.pan-y = 0px; }
+    function zoom-by(factor: float) { root.zoom = clamp(root.scale * factor, 0.01, 16); root.fit = false; }
+    changed revision => { root.reset-view(); if root.visible { keys.focus(); } }
+    changed photo-width => { root.pan-x = 0px; root.pan-y = 0px; }
+    background: Theme.canvas;
+    init => { if root.visible { keys.focus(); } }
+    forward-focus: keys;
+    public function focus-content() { keys.focus(); }
+    keys := FocusScope {
+        capture-key-pressed(event) => {
+            if event.text == Key.Escape { root.escape(); return accept; }
+            if event.text == Key.Backspace { root.close(); return accept; }
+            if event.text == "f" || event.text == "F" || event.text == Key.F11 { root.toggle-fullscreen(); return accept; }
+            if event.text == Key.Home { root.jump(false); return accept; }
+            if event.text == Key.End { root.jump(true); return accept; }
+            if event.text == Key.LeftArrow || event.text == Key.RightArrow {
+                if event.modifiers.shift {
+                    root.pan-x = clamp(root.pan-x + (event.text == Key.LeftArrow ? 80px : -80px), -root.extent-x, root.extent-x);
+                } else if event.text == Key.LeftArrow { if root.can-previous { root.navigate(-1); } }
+                else { if root.can-next { root.navigate(1); } }
+                return accept;
+            }
+            if event.text == Key.UpArrow || event.text == Key.DownArrow {
+                root.pan-y = clamp(root.pan-y + (event.text == Key.UpArrow ? 80px : -80px), -root.extent-y, root.extent-y);
+                return accept;
+            }
+            if event.text == " " {
+                if event.modifiers.shift { if root.can-previous { root.navigate(-1); } }
+                else { if root.can-next { root.navigate(1); } }
+                return accept;
+            }
+            if event.text == "+" || event.text == "=" { root.zoom-by(1.25); return accept; }
+            if event.text == "-" { root.zoom-by(0.8); return accept; }
+            if event.text == "0" { root.reset-view(); return accept; }
+            if event.text == "1" { root.zoom = 1; root.fit = false; if !root.full-quality { root.set-full-quality(true); } return accept; }
+            return reject;
+        }
+        viewport := Rectangle {
+            x:24px;y:24px;width:max(0px,parent.width - 48px);height:max(0px,parent.height - 96px);clip:true;background:Theme.canvas;
+                photo-image := Image {
+                    transform-rotation: root.rotation * 90deg;
+                    source: root.photo;
+                    width: root.photo-width * root.scale * root.pixel;
+                    height: root.photo-height * root.scale * root.pixel;
+                    x: (parent.width - self.width) / 2 + clamp(root.pan-x, -root.extent-x, root.extent-x);
+                    y: (parent.height - self.height) / 2 + clamp(root.pan-y, -root.extent-y, root.extent-y);
+                    image-fit: contain;
+                }
+                pan-area := TouchArea {
+                    mouse-cursor: root.fit ? default : grab;
+                    pointer-event(event) => {
+                        if event.kind == PointerEventKind.down {
+                            keys.focus();
+                            root.drag-x = clamp(root.pan-x, -root.extent-x, root.extent-x);
+                            root.drag-y = clamp(root.pan-y, -root.extent-y, root.extent-y);
+                        }
+                    }
+                    moved => {
+                        if self.pressed {
+                            root.pan-x = root.drag-x + self.mouse-x - self.pressed-x;
+                            root.pan-y = root.drag-y + self.mouse-y - self.pressed-y;
+                        }
+                    }
+                    scroll-event(event) => {
+                        if event.delta-y > 0px { root.zoom-by(1.15); }
+                        if event.delta-y < 0px { root.zoom-by(1 / 1.15); }
+                        return accept;
+                    }
+                    double-clicked => { if root.fit { root.zoom = 1; root.fit = false; if !root.full-quality { root.set-full-quality(true); } } else { root.reset-view(); } }
+                }
+        }
+        if root.loading || root.status!="": Rectangle {
+            x:16px;y:16px;width:min(parent.width - 32px,status-text.preferred-width + (root.loading ? 42px : 20px));height:28px;border-radius:6px;background:#181a1eeb;border-width:1px;border-color:Theme.control-border;
+            if root.loading: Rectangle { x:10px;y:10px;width:8px;height:8px;border-radius:4px;background:Theme.accent; }
+            status-text := Text { x:root.loading ? 26px : 10px;width:parent.width - self.x - 10px;height:parent.height;text:root.status!="" ? root.status : "Loading photo…";color:Theme.secondary;font-size:12px;vertical-alignment:center;overflow:elide; }
+        }
+        if root.error!="": Rectangle {
+            x:24px;y:(parent.height - self.height)/2;width:parent.width - 48px;height:100px;background:Theme.surface;border-radius:8px;
+            Text { x:18px;y:12px;width:parent.width - 36px;height:parent.height - 24px;text:root.error;color:Theme.danger;wrap:word-wrap;vertical-alignment:center; }
+        }
+        zoom-controls := Rectangle {
+            width:min(parent.width - 16px,390px);height:38px;x:(parent.width - self.width)/2;y:parent.height - self.height - 16px;
+            border-radius:10px;border-width:1px;border-color:Theme.control-border;background:#181a1eeb;
+            HorizontalLayout { padding:4px;spacing:2px;
+                fit-button := ToolButton { text:"Fit";active:root.fit;clicked=>{root.reset-view();keys.focus();} }
+                if root.width>=380px: actual-button := ToolButton { text:"100%";active:!root.fit && root.zoom==1;enabled:root.photo-width>0;clicked=>{root.zoom=1;root.fit=false;if !root.full-quality{root.set-full-quality(true);}keys.focus();} }
+                Separator { }
+                ToolButton { icon:Icons.minus;icon-only:true;label:"Zoom out";clicked=>{root.zoom-by(0.8);keys.focus();} }
+                Text { width:40px;text:round(root.scale * 100 * (root.photo-original-width>0 ? root.photo-width/root.photo-original-width : 1))+"%";font-size:12px;color:Theme.secondary;horizontal-alignment:center;vertical-alignment:center; }
+                ToolButton { icon:Icons.plus;icon-only:true;label:"Zoom in";clicked=>{root.zoom-by(1.25);keys.focus();} }
+                Separator { }
+                quality-toggle := ToolButton { text:root.width<430px ? "Full" : "Full quality";label:"Full quality";active:root.full-quality;clicked=>{root.reset-view();root.set-full-quality(!root.full-quality);keys.focus();} }
+            }
+        }
+    }
+}

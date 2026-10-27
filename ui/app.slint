@@ -1,0 +1,256 @@
+import { SettingsPage } from "pages/settings.slint";
+import { VideoPage } from "pages/video.slint";
+import { ViewerPage } from "pages/viewer.slint";
+import { LibraryPage } from "pages/library.slint";
+import { Theme } from "theme.slint";
+import { ImageRow, LibraryBand, DetailRow, DateMark } from "media-types.slint";
+import { Palette } from "std-widgets.slint";
+import { Toast } from "components/toast.slint";
+import { Filmstrip } from "components/filmstrip.slint";
+import { InfoPanel } from "components/info-panel.slint";
+import { ViewerHeader } from "components/viewer-header.slint";
+import "fonts/Inter.ttf";
+export { ImageRow, LibraryBand, DetailRow, DateMark }
+
+export component AppWindow inherits Window {
+    in property <bool> write-metadata;
+    in property <bool> edit-busy;
+    in property <string> settings-status;
+    in-out property <bool> settings-open;
+    callback change-metadata-mode(bool);
+    public function open-settings() {root.settings-open=true;root.slideshow=false;if root.is-video {root.video-pause(true);}}
+    public function close-settings() {root.settings-open=false;if root.viewer-open {root.focus-viewer();}else{root.focus-library();}}
+    in property <[ImageRow]> images;
+    in property <[LibraryBand]> bands;
+    in property <[LibraryBand]> visible-bands;
+    in property <[ImageRow]> filmstrip;
+    in property <[DateMark]> date-marks;
+    in property <float> date-cursor;
+    in property <string> info;
+    in property <[DetailRow]> details;
+    in property <string> media-kind;
+    in property <float> slide-progress;
+    in-out property <bool> info-open: true;
+    changed slideshow => { if root.slideshow { root.info-open=false; } }
+    in-out property <bool> grid: true;
+    in-out property <int> group-mode: 1;
+    in-out property <int> type-filter;
+    in-out property <int> rating-filter;
+    in-out property <string> camera-filter;
+    in-out property <string> date-from;
+    in-out property <string> date-to;
+    in-out property <bool> pair-files: true;
+    in property <bool> has-pair;
+    in property <int> rotation;
+    in-out property <int> rating;
+    in-out property <bool> rejected;
+    in-out property <bool> slideshow;
+    in-out property <int> slide-seconds: 5;
+    in-out property <string> action-status;
+    in-out property <int> notice-id;
+    callback filmstrip-capacity(int);
+    changed width => {root.filmstrip-capacity(max(1,floor((root.width - 32px)/64px)));}
+    callback action(string);
+    callback set-rating(int);
+    callback apply-filter();
+    callback layout-changed(int,float);
+    callback request-thumbnails(float,float);
+    in property <string> folder;
+    in property <string> status;
+    in property <bool> busy;
+    in property <int> scan-completed;
+    in property <int> scan-total:-1;
+    callback choose-folder();
+    callback sort-library(int);
+    in property <int> sort-column: 2;
+    in property <bool> sort-descending;
+    callback open-photo(int);
+    callback navigate(int);
+    callback close-photo();
+    callback viewer-escape();
+    callback toggle-fullscreen();
+    callback jump-item(bool);
+    callback video-rotate(int);
+    callback video-frame-step(bool);
+    in-out property <int> library-selection: -1;
+    callback set-full-quality(bool);
+    in-out property <bool> full-quality;
+    in-out property <bool> viewer-open;
+    in property <bool> is-video;
+    in property <image> video-texture;
+    in-out property <float> video-texture-width;
+    in-out property <float> video-texture-height;
+    in property <bool> video-available;
+    in property <bool> video-loading;
+    in property <string> video-error;
+    in property <bool> video-paused;
+    in property <bool> video-ended;
+    in-out property <float> video-position;
+    in property <float> video-duration;
+    in-out property <float> video-volume: 100;
+    in property <bool> video-muted;
+    callback video-pause(bool);
+    callback video-seek(float);
+    callback video-set-volume(float);
+    callback video-mute(bool);
+    in property <image> photo;
+    in property <float> photo-width;
+    in property <float> photo-height;
+    in property <float> photo-original-width;
+    in property <string> photo-title;
+    in property <string> photo-position;
+    in property <string> photo-status;
+    in property <string> photo-error;
+    in property <bool> photo-loading;
+    in property <bool> photo-full;
+    in property <bool> can-previous;
+    in property <bool> can-next;
+    in-out property <int> photo-revision;
+    public function focus-library() { library.focus-content(); }
+    public function focus-viewer() {
+        if root.is-video { video-viewer.focus-content(); }
+        else { photo-viewer.focus-content(); }
+    }
+    title: "ibis";
+    icon: @image-url("assets/appicon.png");
+    preferred-width: 1200px;
+    preferred-height: 720px;
+    min-width: 640px;
+    min-height: 480px;
+    default-font-family: "Inter";
+    default-font-size: 13px;
+    background: Theme.background;
+    init => { Palette.color-scheme = ColorScheme.dark; }
+
+    shortcuts := FocusScope {
+        min-width:0px;min-height:0px;preferred-width:0px;preferred-height:0px;
+        max-width:100000px;max-height:100000px;horizontal-stretch:1;vertical-stretch:1;
+        capture-key-pressed(event) => {
+            if root.settings-open {if event.text==Key.Escape {root.close-settings();return accept;}return reject;}
+            if !root.viewer-open { return reject; }
+            if event.text==Key.LeftArrow && !event.modifiers.shift { if root.can-previous {root.navigate(-1);} return accept; }
+            if event.text==Key.RightArrow && !event.modifiers.shift { if root.can-next {root.navigate(1);} return accept; }
+            if event.text==Key.Home {root.jump-item(false);return accept;}
+            if event.text==Key.End {root.jump-item(true);return accept;}
+            if event.text==Key.Escape {root.viewer-escape();return accept;}
+            if event.text==Key.Backspace {root.close-photo();return accept;}
+            if event.text=="f" || event.text=="F" || event.text==Key.F11 {root.toggle-fullscreen();return accept;}
+            if event.text == "i" || event.text == "I" { root.info-open = !root.info-open; root.focus-viewer(); return accept; }
+            if event.text == "r" || event.text == "R" { root.action("rotate"); return accept; }
+            if event.text == "b" || event.text == "B" { root.action("pair"); return accept; }
+            if event.text == "s" || event.text == "S" { root.slideshow = !root.slideshow;root.focus-viewer();return accept; }
+            if event.text == "x" || event.text == "X" { root.action("reject");return accept; }
+            if event.modifiers.control && (event.text=="c" || event.text=="C") { root.action(event.modifiers.shift ? "copy-path" : "copy-image");return accept; }
+            if event.modifiers.control && (event.text=="z" || event.text=="Z") { root.action("undo");return accept; }
+            if event.text == Key.Delete { root.action("trash");return accept; }
+            return reject;
+        }
+    library := LibraryPage {
+        min-width:0px;min-height:0px;preferred-width:0px;preferred-height:0px;
+        max-width:100000px;max-height:100000px;horizontal-stretch:1;vertical-stretch:1;
+        bands: root.bands;visible-bands:root.visible-bands; date-marks:root.date-marks;date-cursor:root.date-cursor;
+        grid <=> root.grid; group-mode <=> root.group-mode;
+        type-filter <=> root.type-filter; rating-filter <=> root.rating-filter;
+        camera-filter <=> root.camera-filter; date-from <=> root.date-from; date-to <=> root.date-to;
+        pair-files <=> root.pair-files;
+        apply-filter => { root.apply-filter(); }
+        layout-changed(columns,height) => { root.layout-changed(columns,height); }
+        request-thumbnails(y,h) => { root.request-thumbnails(y,h); }
+        action(name) => { root.action(name); }
+
+        selected-index <=> root.library-selection;
+        visible: !root.viewer-open && !root.settings-open;
+        images: root.images;
+        sort-column: root.sort-column; sort-descending: root.sort-descending;
+        sort-column-clicked(column) => { root.sort-library(column); }
+        folder: root.folder;
+        status: root.status + (root.action-status != "" ? " · " + root.action-status : "");
+        busy: root.busy;scan-completed:root.scan-completed;scan-total:root.scan-total;
+        settings=>{root.open-settings();}
+        choose-folder => { root.choose-folder(); }
+        open-photo(index) => { root.open-photo(index); }
+    }
+
+    viewer-area := Rectangle {
+        visible:!root.settings-open;
+        x: 0px; y: 48px; width: parent.width - (root.info-open ? 300px : 0px); height: parent.height - 124px;
+    // Keep focus targets alive when crossing between photos and videos.
+    photo-viewer := ViewerPage {
+        // The window supplies the viewport size, independent of image dimensions.
+        min-width: 0px; min-height: 0px; preferred-width: 0px; preferred-height: 0px;
+        max-width: 100000px; max-height: 100000px;
+        horizontal-stretch: 1; vertical-stretch: 1;
+        visible: root.viewer-open && !root.is-video;
+        rotation: root.rotation;
+        photo: root.photo; photo-width: root.photo-width; photo-height: root.photo-height;
+        photo-original-width: root.photo-original-width;
+        photo-title: root.photo-title; position: root.photo-position;
+        status: root.photo-status; error: root.photo-error;
+        loading: root.photo-loading; full-quality <=> root.full-quality;
+        can-previous: root.can-previous; can-next: root.can-next;
+        revision: root.photo-revision;
+        close => { root.close-photo(); }
+        escape => { root.viewer-escape(); }
+        toggle-fullscreen => { root.toggle-fullscreen(); }
+        jump(last) => { root.jump-item(last); }
+        navigate(delta) => { root.navigate(delta); }
+        set-full-quality(enabled) => { root.set-full-quality(enabled); }
+    }
+    video-viewer := VideoPage {
+        // The window supplies the viewport size, independent of image dimensions.
+        min-width: 0px; min-height: 0px; preferred-width: 0px; preferred-height: 0px;
+        max-width: 100000px; max-height: 100000px;
+        horizontal-stretch: 1; vertical-stretch: 1;
+        visible: root.viewer-open && root.is-video;
+        texture: root.video-texture;
+        viewport-resized(w, h) => { root.video-texture-width = w; root.video-texture-height = h; }
+        media-title: root.photo-title; position: root.photo-position;
+        can-previous: root.can-previous; can-next: root.can-next; revision: root.photo-revision;
+        loading: root.video-loading; error: root.video-error;
+        paused: root.video-paused; ended: root.video-ended;
+        elapsed <=> root.video-position; duration: root.video-duration;
+        volume <=> root.video-volume; muted: root.video-muted;
+        close => { root.close-photo(); }
+        escape => { root.viewer-escape(); }
+        toggle-fullscreen => { root.toggle-fullscreen(); }
+        jump(last) => { root.jump-item(last); }
+        navigate(delta) => { root.navigate(delta); }
+        pause(value) => { root.video-pause(value); }
+        frame-step(forward) => { root.video-frame-step(forward); }
+        seek(value) => { root.video-seek(value); }
+        set-volume(value) => { root.video-set-volume(value); }
+        mute(value) => { root.video-mute(value); }
+    }
+    }
+    if root.viewer-open && !root.settings-open: ViewerHeader {
+        x:0px;y:0px;
+        width:parent.width;
+        settings=>{root.open-settings();}
+        title:root.photo-title;position:root.photo-position;kind:root.media-kind;
+        inspector:root.info-open;slideshow:root.slideshow;seconds <=> root.slide-seconds;progress:root.slide-progress;
+        can-previous:root.can-previous;can-next:root.can-next;
+        close=>{root.close-photo();}undo=>{root.action("undo");root.focus-viewer();}
+        toggle-slideshow=>{root.slideshow=!root.slideshow;root.focus-viewer();}
+        navigate(delta)=>{root.navigate(delta);}fullscreen=>{root.toggle-fullscreen();root.focus-viewer();}
+        toggle-inspector=>{root.info-open=!root.info-open;root.focus-viewer();}
+    }
+    if root.viewer-open && root.info-open && !root.settings-open: InfoPanel {
+        x:viewer-area.width;y:48px;width:parent.width - self.x;height:parent.height - 124px;
+        edits-enabled:!root.edit-busy;
+        details:root.details;rating:root.rating;rejected:root.rejected;video:root.is-video;paired:root.has-pair;
+        action(name)=>{root.action(name);if root.viewer-open {root.focus-viewer();}}
+        set-rating(value)=>{root.set-rating(value);root.focus-viewer();}
+    }
+    if root.viewer-open && !root.settings-open: Filmstrip { x:0px;y:parent.height - 76px;height:76px;width:parent.width;entries:root.filmstrip;selected:root.library-selection;open(index)=>{root.open-photo(index);} }
+    if root.viewer-open && !root.settings-open && root.action-status!="": Toast {
+        x:(viewer-area.width - self.width)/2;y:parent.height - 166px;
+        max-width:viewer-area.width - 32px;
+        message:root.action-status;dismiss=>{root.action-status="";}
+    }
+    if root.settings-open: SettingsPage {
+        x:0px;y:0px;width:parent.width;height:parent.height;
+        write-metadata:root.write-metadata;enabled:!root.edit-busy && !root.busy;status:root.settings-status;
+        change-mode(value)=>{root.change-metadata-mode(value);}close=>{root.close-settings();}
+    }
+    }
+}

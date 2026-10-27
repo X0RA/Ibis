@@ -1,0 +1,12 @@
+import "../fonts/Inter.ttf";
+import { LibraryPage } from "../pages/library.slint";
+import { ImageRow, LibraryBand } from "../media-types.slint";
+export component LibraryPreview inherits Window {
+    default-font-family:"Inter";
+    width: 1400px; height: 1000px;
+    in property <[ImageRow]> rows:[{index:0,band:0,name:"Holiday.jpg",format:"JPEG",paired:true,rating:4,thumbnail:@image-url("../images/folder.svg"),date:"2026-10-27"},{index:1,band:0,name:"Clip.mp4",format:"MP4",video:true,duration:"0:30",date:"2026-10-27"}];
+    LibraryPage { x:0px;y:0px;width:696px;height:496px;folder:"/Photos";status:"2 items · 3 files";images:root.rows;bands:[{label:"27 October 2026",count:2,offset:0,size:248,cells:root.rows}];visible-bands:[{label:"27 October 2026",count:2,offset:0,size:248,cells:root.rows}];selected-index:0; }
+    LibraryPage { x:704px;y:0px;width:696px;height:496px;grid:false;folder:"/Photos";images:root.rows;bands:[{label:"27 October 2026",count:2,offset:0,size:80,cells:[root.rows[0]]},{offset:80,size:44,cells:[root.rows[1]]}]; }
+    LibraryPage { x:0px;y:504px;width:696px;height:496px;folder:"/Photos/Scanning";busy:true;status:"Scanning…"; }
+    LibraryPage { x:704px;y:504px;width:696px;height:496px;filters-open:true;type-filter:1;date-from:"2026-10-01";folder:"/Photos";status:"2 of 248 items · Photos"; }
+}

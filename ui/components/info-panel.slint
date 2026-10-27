@@ -1,0 +1,52 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { DetailRow } from "../media-types.slint";
+import { ToolButton } from "tool-button.slint";
+export component InfoPanel inherits Rectangle {
+    in property <[DetailRow]> details;
+    in property <int> rating;
+    in property <bool> edits-enabled:true;
+    in property <bool> rejected;
+    in property <bool> video;
+    in property <bool> paired;
+    callback action(string);
+    callback set-rating(int);
+    background:Theme.surface;
+    accessible-role:complementary;accessible-label:"Inspector";
+    Rectangle { x:0px;y:0px;width:1px;height:parent.height;background:Theme.border; }
+    inspector-scroll := ScrollView { x:1px;y:0px;width:parent.width - 1px;height:parent.height;horizontal-scrollbar-policy:always-off;
+        content-width:self.visible-width;
+        content-height:body.height + 16px;
+        body := VerticalLayout {
+            x:0px;y:0px;width:inspector-scroll.visible-width - 12px;height:self.preferred-height;
+            alignment:start;spacing:0px;
+            VerticalLayout { padding-top:16px;padding-bottom:16px;padding-left:16px;padding-right:16px;spacing:12px;vertical-stretch:0;
+                Text { height:14px;text:"RATING";color:Theme.muted;font-size:11px;font-weight:600; }
+                HorizontalLayout { height:28px;spacing:0px;
+                    for star in 5: ToolButton { enabled:root.edits-enabled; width:28px;icon-only:true;icon:Icons.star;label:(star+1)+" stars";opacity:star<root.rating ? 1 : 0.3;clicked=>{root.set-rating(root.rating==star+1 ? 0 : star+1);} }
+                    Rectangle { horizontal-stretch:1; }
+                    ToolButton { enabled:root.edits-enabled;text:root.rejected ? "Rejected" : "Reject";label:"Toggle rejected";icon:Icons.reject;chip:true;active:root.rejected;danger:root.rejected;clicked=>{root.action("reject");} }
+                }
+            }
+            Rectangle { height:1px;background:Theme.border; }
+            VerticalLayout { padding:12px;spacing:1px;vertical-stretch:0;
+                ToolButton { text:"Rotate";icon:Icons.rotate;keys:["R"];height:32px;align-left:true;horizontal-stretch:1;clicked=>{root.action("rotate");} }
+                if !root.video: ToolButton { text:"Switch RAW / JPEG";icon:Icons.layers;keys:root.paired ? ["B"] : [];hint:root.paired ? "" : "Not paired";enabled:root.paired;height:32px;align-left:true;horizontal-stretch:1;clicked=>{root.action("pair");} }
+                if !root.video: ToolButton { text:"Copy image";icon:Icons.copy;keys:["Ctrl","C"];height:32px;align-left:true;horizontal-stretch:1;clicked=>{root.action("copy-image");} }
+                ToolButton { text:"Copy path";icon:Icons.link;keys:["Ctrl","Shift","C"];height:32px;align-left:true;horizontal-stretch:1;clicked=>{root.action("copy-path");} }
+                ToolButton { text:"Show in file manager";icon:Icons.reveal;height:32px;align-left:true;horizontal-stretch:1;clicked=>{root.action("reveal");} }
+                ToolButton { text:"Move to trash";icon:Icons.trash;keys:["Del"];danger:true;height:32px;align-left:true;horizontal-stretch:1;clicked=>{root.action("trash");} }
+            }
+            Rectangle { height:1px;background:Theme.border; }
+            VerticalLayout { padding:20px;spacing:12px;vertical-stretch:0;
+                Text { text:"DETAILS";color:Theme.muted;font-size:11px;font-weight:600; }
+                for detail in root.details: Rectangle {
+                    height:max(detail-label.preferred-height,detail-value.preferred-height);
+                    detail-label := Text { x:0px;y:0px;width:76px;height:self.preferred-height;text:detail.label;color:Theme.muted;font-size:12px; }
+                    detail-value := Text { x:88px;y:0px;width:parent.width - 88px;height:self.preferred-height;text:detail.value;color:detail.value=="—" ? Theme.muted : Theme.foreground;font-size:12px;wrap:word-wrap; }
+                }
+            }
+        }
+    }
+}

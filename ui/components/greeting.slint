@@ -1,0 +1,23 @@
+import { Theme } from "../theme.slint";
+
+export component Greeting inherits VerticalLayout {
+    in property <string> heading: "Hello, world!";
+    in property <string> description: "Welcome to ibis.";
+    spacing: 12px;
+    alignment: center;
+
+    Text {
+        text: root.heading;
+        color: Theme.accent;
+        font-size: 32px;
+        font-weight: 600;
+        horizontal-alignment: center;
+    }
+
+    Text {
+        text: root.description;
+        color: Theme.muted;
+        font-size: 16px;
+        horizontal-alignment: center;
+    }
+}

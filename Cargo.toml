@@ -1,0 +1,72 @@
+[package]
+name = "ibis"
+version = "0.1.0"
+edition = "2024"
+repository = "https://github.com/X0RA/Ibis"
+build = "build.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+chrono = "0.4"
+clap = { version = "4", features = ["derive"] }
+serde_json = "1"
+walkdir = "2"
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp", "tiff", "gif", "bmp", "ico", "pnm", "tga", "hdr", "exr"] }
+libheif-rs = { version = "3.0", default-features = false, features = ["v1_17"] }
+jxl-oxide = { version = "0.12.6", features = ["image", "moxcms"] }
+moxcms = "0.8.1"
+fast_image_resize = { version = "6.1", features = ["image"] }
+rfd = "0.17"
+libmpv2 = "6.0"
+libmpv2-sys = "4.0"
+glow = "0.18"
+slint = { version = "=1.18.1", default-features = false, features = ["std", "backend-winit", "renderer-femtovg", "compat-1-2"] }
+notify = "8"
+trash = "5"
+arboard = { version = "3.6", features = ["wayland-data-control"] }
+sha2 = "0.10"
+url = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[build-dependencies]
+slint-build = "=1.18.1"
+cc = "1"
+pkg-config = "0.3"
+vcpkg = "0.2"
+
+# Optimize the normal target/debug binary while retaining debug symbols.
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package.i-slint-core]
+opt-level = 2
+
+[profile.dev.package.i-slint-renderer-software]
+opt-level = 3
+
+[profile.dev.package.parley]
+opt-level = 2
+
+[profile.dev.package.swash]
+opt-level = 2
+
+[profile.dev.package.harfrust]
+opt-level = 2
+
+# Photo decoding/resampling must be fast in the normal development binary too.
+[profile.dev.package.image]
+opt-level = 3
+
+[profile.dev.package.zune-jpeg]
+opt-level = 3
+
+[profile.dev.package.zune-core]
+opt-level = 3
+
+[profile.dev.package.moxcms]
+opt-level = 3
+
+[profile.dev.package.fast_image_resize]
+opt-level = 3

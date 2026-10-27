@@ -1,0 +1,7 @@
+import "../fonts/Inter.ttf";
+import { SettingsPage } from "../pages/settings.slint";
+export component SettingsPreview inherits Window {
+    width:1200px;height:700px;default-font-family:"Inter";
+    SettingsPage { x:0px;width:600px; }
+    SettingsPage { x:600px;width:600px;write-metadata:true;status:"Saved"; }
+}

@@ -1,0 +1,9 @@
+export struct ImageRow {
+    path: string, name: string, directory: string, format: string, date: string, source: string,
+    thumbnail: image, index: int, band: int, rating: int, rejected: bool, paired: bool, rotation: int, video: bool, raw: bool, duration: string, year: string,
+}
+export struct LibraryBand { label: string, count: int, cells: [ImageRow], offset: float, size: float }
+
+export struct DetailRow { label: string, value: string }
+
+export struct DateMark { label:string, title:string, offset:float, index:int, major:bool }

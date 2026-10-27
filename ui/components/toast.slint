@@ -1,0 +1,14 @@
+import { Theme } from "../theme.slint";
+export component Toast inherits Rectangle {
+    in property <string> message;
+    callback dismiss();
+    width:min(440px,caption.preferred-width + 58px);height:40px;
+    border-radius:8px;background:Theme.raised;border-width:1px;border-color:Theme.control-border;
+    accessible-role:text;accessible-label:root.message;
+    caption := Text { x:14px;y:0px;width:parent.width - 48px;height:parent.height;text:root.message;color:Theme.foreground;font-size:12px;vertical-alignment:center;overflow:elide; }
+    Rectangle { x:parent.width - 34px;y:6px;width:28px;height:28px;border-radius:4px;background:touch.has-hover ? Theme.hover : transparent;
+        Text { text:"×";color:Theme.secondary;font-size:18px;horizontal-alignment:center;vertical-alignment:center; }
+        touch := TouchArea { mouse-cursor:pointer;clicked=>{root.dismiss();} }
+        accessible-role:button;accessible-label:"Dismiss notification";
+    }
+}

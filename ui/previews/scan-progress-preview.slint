@@ -1,0 +1,10 @@
+import "../fonts/Inter.ttf";
+import { ScanProgress } from "../components/scan-progress.slint";
+import { Theme } from "../theme.slint";
+export component ScanProgressPreview inherits Window {
+    width:640px;height:480px;default-font-family:"Inter";background:Theme.background;
+    ScanProgress { x:170px;y:20px; }
+    ScanProgress { x:170px;y:100px;completed:64;total:256; }
+    ScanProgress { x:170px;y:180px;completed:256;total:256; }
+    ScanProgress { x:(parent.width - self.width)/2;y:parent.height - self.height - 46px;completed:128;total:720; }
+}

@@ -1,0 +1,10 @@
+export component AppIconPreview inherits Window {
+    title: "ibis icon";
+    icon: @image-url("../assets/appicon.png");
+    width:400px;height:220px;background:#101317;
+    Image { x:24px;y:24px;width:160px;height:160px;source:@image-url("../assets/appicon.png"); }
+    Rectangle { x:208px;y:24px;width:168px;height:160px;background:#f4f5f7;
+        Image { x:24px;y:24px;width:64px;height:64px;source:@image-url("../assets/appicon.png"); }
+        Image { x:104px;y:40px;width:32px;height:32px;source:@image-url("../assets/appicon.png"); }
+    }
+}

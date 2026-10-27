@@ -1,0 +1,422 @@
+name: Release
+
+# No upstream URL is hardcoded here; GitHub supplies github.repository.
+# Main pushes (including merges) automatically tag and release a new version.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths-ignore:
+      - '**/*.md'
+      - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Override version (plain, e.g. 1.0.0). Blank = auto-bump."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  APP_BIN: ibis
+  APP_NAME: ibis
+  APP_BUNDLE_ID: io.github.ibis
+
+jobs:
+  version:
+    name: Resolve version
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      changelog: ${{ steps.bump.outputs.changelog }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Bump version (auto-bump path only)
+        id: bump
+        if: >-
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+          || (github.event_name == 'workflow_dispatch' && inputs.version == '')
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch
+          tag_prefix: v
+
+      - name: Resolve final version and tag
+        id: resolve
+        env:
+          BUMP_VERSION: ${{ steps.bump.outputs.new_version }}
+          BUMP_TAG: ${{ steps.bump.outputs.new_tag }}
+          INPUT_VERSION: ${{ inputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "${EVENT_NAME}" = "push" ] && [[ "${REF}" == refs/tags/v* ]]; then
+            TAG="${REF_NAME}"
+            VERSION="${TAG#v}"
+          elif [ -n "${INPUT_VERSION}" ]; then
+            VERSION="${INPUT_VERSION}"
+            TAG="v${INPUT_VERSION}"
+          else
+            VERSION="${BUMP_VERSION}"
+            TAG="${BUMP_TAG}"
+          fi
+          if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || [ "${TAG}" != "v${VERSION}" ]; then
+            echo "Expected a release version X.Y.Z and matching vX.Y.Z tag." >&2
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+  build-linux:
+    name: Build Linux
+    needs: version
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install Linux build dependencies
+        run: bash scripts/setup-linux-ci.sh
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ibis-v1
+          shared-key: linux-release
+          cache-on-failure: true
+          cache-bin: false
+
+      - name: Set release package version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: python3 scripts/set-release-version.py "$VERSION"
+
+      - name: Build release binary
+        run: cargo build --release --locked
+
+      - name: Stage Linux binary
+        run: |
+          mkdir -p dist
+          cp "target/release/${APP_BIN}" "dist/${APP_BIN}-linux-x86_64"
+          chmod +x "dist/${APP_BIN}-linux-x86_64"
+          cp packaging/ibis.desktop dist/ibis.desktop
+          cp ui/assets/appicon.png dist/ibis.png
+          cp scripts/check-linux-deps.sh dist/check-linux-deps.sh
+          cp packaging/README.md dist/linux-dependencies.md
+          ldd "target/release/${APP_BIN}" > dist/linux-linked-libraries.txt
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-release
+          path: |
+            dist/${{ env.APP_BIN }}-linux-x86_64
+            dist/ibis.desktop
+            dist/ibis.png
+            dist/check-linux-deps.sh
+            dist/linux-dependencies.md
+            dist/linux-linked-libraries.txt
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows
+    needs: version
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install mpv development files
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git -C $env:VCPKG_INSTALLATION_ROOT pull --ff-only
+          if ($LASTEXITCODE -ne 0) { throw 'Could not update vcpkg ports.' }
+          & "$env:VCPKG_INSTALLATION_ROOT/bootstrap-vcpkg.bat" -disableMetrics
+          ./scripts/powershell/setup-deps.ps1
+          $mpvDir = Join-Path $env:GITHUB_WORKSPACE "deps"
+          "LIB=$mpvDir;$env:LIB" >> $env:GITHUB_ENV
+          "MPV_DEV_DIR=$mpvDir" >> $env:GITHUB_ENV
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+          "VCPKGRS_DYNAMIC=1" >> $env:GITHUB_ENV
+          "VCPKGRS_TRIPLET=x64-windows" >> $env:GITHUB_ENV
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ibis-v1
+          shared-key: windows-release
+          cache-on-failure: true
+          cache-bin: false
+
+      - name: Set release package version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: python scripts/set-release-version.py $env:VERSION
+
+      - name: Build release executable
+        run: cargo build --release --locked
+
+      - name: Stage Windows executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item "target\release\${env:APP_BIN}.exe" "dist\${env:APP_BIN}.exe"
+          $dll = Get-ChildItem $env:MPV_DEV_DIR -Filter "libmpv-2.dll" | Select-Object -First 1
+          if (-not $dll) { throw "libmpv-2.dll missing" }
+          Copy-Item $dll.FullName "dist\libmpv-2.dll"
+          Copy-Item ui/assets/appicon.ico dist/appicon.ico
+          Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin/*.dll" dist/
+          New-Item -ItemType Directory -Force dist/licenses | Out-Null
+          Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/share" dist/licenses/vcpkg -Recurse
+          if (Test-Path deps/licenses) { Copy-Item deps/licenses dist/licenses/mpv -Recurse }
+          Copy-Item scripts/installer/windows-readme.txt dist/README.txt
+          Compress-Archive -Path dist/* -DestinationPath ibis-windows-x86_64.zip
+          Move-Item ibis-windows-x86_64.zip dist/
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build Windows installer
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: .\scripts\powershell\build-installer.ps1 -Version $env:VERSION -BuildDir dist
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-release
+          path: |
+            dist/${{ env.APP_BIN }}-windows-x86_64.zip
+            dist/ibis-${{ needs.version.outputs.version }}-Setup.exe
+          if-no-files-found: error
+
+  build-macos:
+    name: Build macOS
+    needs: version
+    runs-on: macos-14
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install macOS build dependencies
+        run: brew install mpv libraw libheif jpeg-turbo pkg-config exiftool ffmpeg dylibbundler
+
+      - name: Configure Homebrew library path
+        run: |
+          echo "LIBRARY_PATH=$(brew --prefix)/lib" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=$(brew --prefix jpeg-turbo)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig" >> "$GITHUB_ENV"
+          pkg-config --atleast-version=0.22 libraw
+          echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> "$GITHUB_ENV"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ibis-v1
+          shared-key: macos-arm64-release
+          cache-on-failure: true
+          cache-bin: false
+
+      - name: Set release package version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: python3 scripts/set-release-version.py "$VERSION"
+
+      - name: Build macOS release target
+        run: cargo build --release --locked --target aarch64-apple-darwin
+
+      - name: Build macOS .icns from app icon
+        run: |
+          set -euo pipefail
+          APPICON="ui/assets/appicon-1024.png"
+          ICONSET="${RUNNER_TEMP}/ibis.iconset"
+          mkdir -p "${ICONSET}"
+          sips -z 16 16     "${APPICON}" --out "${ICONSET}/icon_16x16.png"
+          sips -z 32 32     "${APPICON}" --out "${ICONSET}/icon_16x16@2x.png"
+          sips -z 32 32     "${APPICON}" --out "${ICONSET}/icon_32x32.png"
+          sips -z 64 64     "${APPICON}" --out "${ICONSET}/icon_32x32@2x.png"
+          sips -z 128 128   "${APPICON}" --out "${ICONSET}/icon_128x128.png"
+          sips -z 256 256   "${APPICON}" --out "${ICONSET}/icon_128x128@2x.png"
+          sips -z 256 256   "${APPICON}" --out "${ICONSET}/icon_256x256.png"
+          sips -z 512 512   "${APPICON}" --out "${ICONSET}/icon_256x256@2x.png"
+          sips -z 512 512   "${APPICON}" --out "${ICONSET}/icon_512x512.png"
+          sips -z 1024 1024 "${APPICON}" --out "${ICONSET}/icon_512x512@2x.png"
+          mkdir -p ui/assets
+          iconutil -c icns "${ICONSET}" -o "ui/assets/appicon.icns"
+
+      - name: Assemble macOS app
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          APP_DIR="dist/app/${APP_NAME}.app"
+          mkdir -p "${APP_DIR}/Contents/MacOS"
+          mkdir -p "${APP_DIR}/Contents/Resources"
+          mkdir -p "${APP_DIR}/Contents/Frameworks"
+          cp "target/aarch64-apple-darwin/release/${APP_BIN}" "${APP_DIR}/Contents/MacOS/${APP_BIN}"
+          chmod +x "${APP_DIR}/Contents/MacOS/${APP_BIN}"
+          cat > "${APP_DIR}/Contents/MacOS/launch" <<'LAUNCH'
+          #!/bin/sh
+          export PATH="${PATH}:/opt/homebrew/bin:/usr/local/bin"
+          exec "$(dirname "$0")/ibis" "$@"
+          LAUNCH
+          chmod +x "${APP_DIR}/Contents/MacOS/launch"
+          cp packaging/README.md "${APP_DIR}/Contents/Resources/Dependencies.md"
+          echo 'Install external tools with: brew install exiftool ffmpeg' > dist/app/README.txt
+          if [ -f "ui/assets/appicon.icns" ]; then
+            cp "ui/assets/appicon.icns" "${APP_DIR}/Contents/Resources/${APP_NAME}.icns"
+          fi
+
+      - name: Bundle dynamic libraries into app
+        run: |
+          APP_DIR="dist/app/${APP_NAME}.app"
+          dylibbundler \
+            --overwrite-files \
+            --bundle-deps \
+            --fix-file "${APP_DIR}/Contents/MacOS/${APP_BIN}" \
+            --dest-dir "${APP_DIR}/Contents/Frameworks/" \
+            --install-path "@executable_path/../Frameworks/"
+
+      - name: Create macOS app metadata
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          APP_DIR="dist/app/${APP_NAME}.app"
+          ICON_KEY=""
+          if [ -f "${APP_DIR}/Contents/Resources/${APP_NAME}.icns" ]; then
+            ICON_KEY="<key>CFBundleIconFile</key><string>${APP_NAME}</string>"
+          fi
+          cat > "${APP_DIR}/Contents/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>en</string>
+            <key>CFBundleDisplayName</key>
+            <string>${APP_NAME}</string>
+            <key>CFBundleExecutable</key>
+            <string>launch</string>
+            <key>CFBundleIdentifier</key>
+            <string>${APP_BUNDLE_ID}</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>CFBundleName</key>
+            <string>${APP_NAME}</string>
+            ${ICON_KEY}
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${VERSION}</string>
+            <key>CFBundleVersion</key>
+            <string>${VERSION}</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>14.0</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+            <key>NSPrincipalClass</key>
+            <string>NSApplication</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Validate and ad-hoc sign macOS app
+        run: |
+          APP_DIR="dist/app/${APP_NAME}.app"
+          plutil -lint "${APP_DIR}/Contents/Info.plist"
+          test -x "${APP_DIR}/Contents/MacOS/${APP_BIN}"
+          codesign --force --deep --sign - "${APP_DIR}"
+          codesign --verify --deep --strict --verbose=2 "${APP_DIR}"
+
+      - name: Create macOS DMG
+        run: |
+          hdiutil create \
+            -volname "${APP_NAME}" \
+            -srcfolder "dist/app" \
+            -ov \
+            -format UDZO \
+            "dist/${APP_BIN}-macos-arm64.dmg"
+
+      - name: Upload macOS DMG artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-release
+          path: dist/${{ env.APP_BIN }}-macos-arm64.dmg
+          if-no-files-found: error
+
+  publish-release:
+    permissions:
+      contents: write
+    name: Publish GitHub Release
+    runs-on: ubuntu-24.04
+    needs:
+      - version
+      - build-linux
+      - build-windows
+      - build-macos
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+          COMMIT: ${{ github.sha }}
+          CHANGELOG: ${{ needs.version.outputs.changelog }}
+        run: |
+          set -euo pipefail
+          (cd release-assets && sha256sum -- * > SHA256SUMS)
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" release-assets/* --clobber
+          elif [ -n "${CHANGELOG}" ]; then
+            printf '%s\n' "${CHANGELOG}" > "${RUNNER_TEMP}/ibis-release-notes.md"
+            gh release create "${TAG}" release-assets/* \
+              --title "${VERSION}" \
+              --target "${COMMIT}" \
+              --notes-file "${RUNNER_TEMP}/ibis-release-notes.md"
+          else
+            gh release create "${TAG}" release-assets/* \
+              --title "${VERSION}" \
+              --target "${COMMIT}" \
+              --generate-notes
+          fi

@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint-and-test:
+    name: Lint & Test (Linux)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install Linux build dependencies
+        run: bash scripts/setup-linux-ci.sh
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ibis-v1
+          shared-key: linux-debug
+          cache-on-failure: true
+          cache-bin: false
+
+      - name: Check packaging
+        run: |
+          for script in scripts/*.sh; do bash -n "$script"; done
+          shellcheck scripts/*.sh
+          desktop-file-validate packaging/ibis.desktop
+          test -s ui/assets/appicon.png
+          test -s ui/assets/appicon-1024.png
+          test -s ui/assets/appicon.ico
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Test
+        run: cargo test --locked
+
+      - name: Check Linux install and uninstall
+        run: |
+          cargo build --locked
+          stage="$(mktemp -d)"
+          make install DESTDIR="$stage" PREFIX=/usr
+          desktop-file-validate "$stage/usr/share/applications/ibis.desktop"
+          cmp target/debug/ibis "$stage/usr/bin/ibis"
+          make uninstall DESTDIR="$stage" PREFIX=/usr
+          test -z "$(find "$stage" -type f -print -quit)"

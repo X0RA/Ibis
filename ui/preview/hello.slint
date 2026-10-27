@@ -1,0 +1,12 @@
+import { HelloPage } from "../pages/hello.slint";
+import { Theme } from "../theme.slint";
+
+// Open this file in the Slint editor preview to work on the page in isolation.
+export component HelloPreview inherits Window {
+    title: "ibis greeting preview";
+    width: 900px;
+    height: 600px;
+    background: Theme.background;
+
+    HelloPage {}
+}

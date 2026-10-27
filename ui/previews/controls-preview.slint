@@ -1,0 +1,24 @@
+import "../fonts/Inter.ttf";
+import { ToolButton } from "../components/tool-button.slint";
+import { Field } from "../components/field.slint";
+import { Choice } from "../components/choice.slint";
+import { Icons } from "../icons.slint";
+import { Theme } from "../theme.slint";
+export component ControlsPreview inherits Window {
+    default-font-family:"Inter";
+    width:700px;height:180px;background:Theme.background;
+    VerticalLayout { padding:16px;spacing:12px;
+        HorizontalLayout { spacing:8px;
+            ToolButton { text:"Open folder";icon:Icons.folder; }
+            ToolButton { text:"RAW + JPEG";icon:Icons.layers;chip:true;active:true; }
+            ToolButton { text:"Apply";primary:true; }
+            ToolButton { text:"Move to trash";icon:Icons.trash;danger:true; }
+            ToolButton { text:"Not paired";enabled:false;icon:Icons.layers; }
+        }
+        HorizontalLayout { spacing:8px;
+            Choice { label:"Date grouping";model:["No groups","By day","By month"];current-index:1; }
+            Field { placeholder:"Camera"; }
+            Field { placeholder:"From date";text:"2026-10-01"; }
+        }
+    }
+}

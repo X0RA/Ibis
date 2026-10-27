@@ -1,0 +1,23 @@
+import { ImageRow } from "../media-types.slint";
+import { Theme } from "../theme.slint";
+import { Icons } from "../icons.slint";
+export component Filmstrip inherits Rectangle {
+    in property <[ImageRow]> entries;
+    in property <int> selected;
+    callback open(int);
+    private property <length> edge:min(56px,max(24px,(root.width - 32px - max(0,root.entries.length - 1)*8px)/max(1,root.entries.length)));
+    background:Theme.background;
+    accessible-role:navigation;accessible-label:"Filmstrip";
+    Rectangle { x:0px;y:0px;width:parent.width;height:1px;background:Theme.border; }
+    HorizontalLayout { y:(root.height - root.edge)/2;height:root.edge;alignment:center;spacing:8px;
+        for entry in root.entries: Rectangle {
+            width:root.edge;height:root.edge;border-radius:6px;border-width:entry.index==root.selected ? 2px : 0px;border-color:Theme.accent;
+            accessible-role:button;accessible-label:entry.name;
+            Rectangle { x:2px;y:2px;width:parent.width - 4px;height:parent.height - 4px;clip:true;border-radius:4px;background:Theme.raised;opacity:entry.index==root.selected ? 1 : touch.has-hover ? 0.85 : 0.5;
+                Image { width:parent.width;height:parent.height;source:entry.thumbnail;image-fit:entry.video ? contain : cover;transform-rotation:entry.rotation*90deg; }
+                if entry.thumbnail.width==0: Image { x:(parent.width - 16px)/2;y:(parent.height - 16px)/2;width:16px;height:16px;source:entry.video ? Icons.play : Icons.grid;colorize:Theme.muted; }
+            }
+            touch := TouchArea { mouse-cursor:pointer;clicked=>{root.open(entry.index);} }
+        }
+    }
+}

@@ -1,0 +1,10 @@
+import "../fonts/Inter.ttf";
+import { ViewerPage } from "../pages/viewer.slint";
+export component ViewerPreview inherits Window {
+    default-font-family:"Inter";
+    width: 1400px; height: 1000px;
+    ViewerPage { x: 0px; y: 0px; width: 696px; height: 496px; photo: @image-url("../images/folder.svg"); photo-width: 400; photo-height: 300; photo-title: "Landscape.RAF"; /* Try +/-, 0/1, and Shift+arrows to zoom and pan. */ position: "1 / 24"; status: "Camera preview · 400 × 300"; can-next: true; }
+    ViewerPage { x: 704px; y: 0px; width: 696px; height: 496px; photo: @image-url("../images/folder.svg"); photo-width: 400; photo-height: 300; photo-title: "A very long photograph filename that should elide gracefully.CR3"; loading: true; full-quality: true; position: "12 / 24"; status: "Camera preview · Developing full quality…"; can-next: true; can-previous: true; }
+    ViewerPage { x: 0px; y: 504px; width: 696px; height: 496px; photo-title: "Damaged.NEF"; error: "Could not open photo: unsupported camera or damaged file"; status: "Use the arrows to continue browsing"; position: "24 / 24"; can-previous: true; }
+    ViewerPage { x: 704px; y: 504px; width: 696px; height: 496px; rotation: 1; photo-title: "Portrait.HEIC"; photo: @image-url("../images/folder.svg"); photo-width: 300; photo-height: 500; full-quality: true; status: "Full quality · 300 × 500"; position: "2 / 24"; can-next: true; can-previous: true; }
+}

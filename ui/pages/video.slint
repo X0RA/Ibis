@@ -1,0 +1,103 @@
+import { Slider, Spinner } from "std-widgets.slint";
+import { ToolButton, Separator } from "../components/tool-button.slint";
+import { Icons } from "../icons.slint";
+import { Theme } from "../theme.slint";
+
+export component VideoPage inherits Rectangle {
+    in property <image> texture;
+    in property <string> media-title;
+    in property <string> position;
+    in property <bool> can-previous;
+    in property <bool> can-next;
+    in property <bool> loading;
+    in property <string> error;
+    in property <bool> paused;
+    in property <bool> ended;
+    in-out property <float> elapsed;
+    in property <float> duration;
+    in-out property <float> volume: 100;
+    in property <bool> muted;
+    in property <int> revision;
+    out property <float> texture-width: viewport.width / 1phx;
+    out property <float> texture-height: viewport.height / 1phx;
+    callback viewport-resized(float, float);
+    changed texture-width => { root.viewport-resized(root.texture-width, root.texture-height); }
+    changed texture-height => { root.viewport-resized(root.texture-width, root.texture-height); }
+    callback close();
+    callback escape();
+    callback toggle-fullscreen();
+    callback jump(bool);
+    callback frame-step(bool);
+    callback navigate(int);
+    callback pause(bool);
+    callback seek(float);
+    callback set-volume(float);
+    callback mute(bool);
+    function time-label(seconds: float) -> string {
+        return floor(max(0, seconds) / 60) + ":" + (mod(floor(max(0, seconds)), 60) < 10 ? "0" : "") + mod(floor(max(0, seconds)), 60);
+    }
+    background: Theme.background;
+    forward-focus: keys;
+    public function focus-content() { keys.focus(); }
+    init => { if root.visible { keys.focus(); } root.viewport-resized(root.texture-width, root.texture-height); }
+    changed revision => { if root.visible { keys.focus(); } }
+    keys := FocusScope {
+        capture-key-pressed(event) => {
+            if event.text == Key.Escape { root.escape(); return accept; }
+            if event.text == Key.Backspace { root.close(); return accept; }
+            if event.text == "f" || event.text == "F" || event.text == Key.F11 { root.toggle-fullscreen(); return accept; }
+            if event.text == Key.Home { root.jump(false); return accept; }
+            if event.text == Key.End { root.jump(true); return accept; }
+            if event.text == Key.LeftArrow || event.text == Key.RightArrow {
+                if event.modifiers.shift {
+                    if root.duration > 0 && root.error == "" {
+                        root.seek(clamp(root.elapsed + (event.text == Key.LeftArrow ? -5 : 5), 0, root.duration));
+                    }
+                } else if event.text == Key.LeftArrow { if root.can-previous { root.navigate(-1); } }
+                else { if root.can-next { root.navigate(1); } }
+                return accept;
+            }
+            if event.text == " " || event.text == "k" || event.text == "K" { root.pause(root.ended ? false : !root.paused); return accept; }
+            if event.text == "j" || event.text == "J" || event.text == "l" || event.text == "L" {
+                if root.duration > 0 && root.error == "" {
+                    root.seek(clamp(root.elapsed + (event.text == "j" || event.text == "J" ? -10 : 10), 0, root.duration));
+                }
+                return accept;
+            }
+            if event.text == Key.UpArrow || event.text == Key.DownArrow {
+                root.set-volume(clamp(root.volume + (event.text == Key.UpArrow ? 5 : -5), 0, 100)); return accept;
+            }
+            if event.text == "m" || event.text == "M" { root.mute(!root.muted); return accept; }
+            if event.text == "," || event.text == "." {
+                if root.paused && root.error == "" { root.frame-step(event.text == "."); }
+                return accept;
+            }
+            return reject;
+        }
+        viewport := Rectangle {
+            width:parent.width;height:parent.height;background:black;clip:true;
+            video-image := Image { width:parent.width;height:parent.height;source:root.texture;image-fit:fill; }
+            video-area := TouchArea { clicked=>{keys.focus();root.pause(root.ended ? false : !root.paused);} }
+        }
+        if root.loading: Rectangle { x:16px;y:16px;width:164px;height:28px;background:#181a1eeb;border-radius:6px;border-width:1px;border-color:Theme.control-border;
+            HorizontalLayout { padding:6px;spacing:8px;Spinner { width:16px;height:16px; } Text { text:"Loading video…";color:Theme.secondary;font-size:12px;vertical-alignment:center; } }
+        }
+        if root.error!="": Rectangle { x:24px;y:(parent.height - self.height)/2;width:parent.width - 48px;height:100px;background:Theme.surface;border-radius:8px;
+            Text { x:18px;y:12px;width:parent.width - 36px;height:parent.height - 24px;text:root.error;color:Theme.danger;wrap:word-wrap;vertical-alignment:center; }
+        }
+        playback-controls := Rectangle {
+            x:(parent.width - self.width)/2;y:parent.height - self.height - 16px;width:min(720px,parent.width - 32px);height:44px;border-radius:10px;background:#181a1eeb;border-width:1px;border-color:Theme.control-border;
+            HorizontalLayout { y:8px;height:28px;padding-left:6px;padding-right:12px;spacing:4px;
+                play-button := ToolButton { icon:root.ended ? Icons.undo : root.paused ? Icons.play : Icons.pause;icon-only:true;label:root.ended ? "Replay" : root.paused ? "Play" : "Pause";enabled:root.error=="";clicked=>{root.pause(root.ended ? false : !root.paused);keys.focus();} }
+                ToolButton { icon:Icons.rewind;icon-only:true;label:"Back 10 seconds";enabled:root.duration>0;clicked=>{root.seek(max(0,root.elapsed - 10));keys.focus();} }
+                ToolButton { icon:Icons.forward;icon-only:true;label:"Forward 10 seconds";enabled:root.duration>0;clicked=>{root.seek(min(root.duration,root.elapsed + 10));keys.focus();} }
+                Text { width:42px;text:root.time-label(root.elapsed);font-size:12px;color:Theme.secondary;vertical-alignment:center;horizontal-alignment:center; }
+                seek-slider := Slider { minimum:0;maximum:max(1,root.duration);value <=> root.elapsed;horizontal-stretch:1;min-width:30px;enabled:root.duration>0 && root.error=="";accessible-label:"Video position";changed(value)=>{root.seek(value);} }
+                Text { width:42px;text:root.time-label(root.duration);font-size:12px;color:Theme.muted;vertical-alignment:center;horizontal-alignment:center; }
+                Separator { }
+                mute-button := ToolButton { icon:Icons.volume;icon-only:true;active:root.muted;label:root.muted ? "Unmute" : "Mute";clicked=>{root.mute(!root.muted);keys.focus();} }
+                if root.width>=540px: volume-slider := Slider { width:64px;minimum:0;maximum:100;value <=> root.volume;accessible-label:"Video volume";changed(value)=>{root.set-volume(value);} }
+            }
+        }
+    }
+}

@@ -1,0 +1,12 @@
+import "../fonts/Inter.ttf";
+import { Thumbnail } from "../components/thumbnail.slint";
+export component ThumbnailPreview inherits Window {
+    default-font-family:"Inter";
+    width: 800px; height: 240px;
+    HorizontalLayout {
+        Thumbnail { selected: true; entry: {name:"Landscape.jpg",format:"JPEG",thumbnail:@image-url("../images/folder.svg"),paired:true,rating:4}; }
+        Thumbnail { entry: {name:"Loading.NEF",format:"NEF",raw:true}; }
+        Thumbnail { entry: {name:"Rejected photograph with a long name.jpg",format:"JPEG",rejected:true}; }
+        Thumbnail { entry: {name:"Video.mp4",format:"MP4",video:true,duration:"2:34"}; }
+    }
+}

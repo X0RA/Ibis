@@ -1,0 +1,189 @@
+import { DateRail } from "../components/date-rail.slint";
+import { ListColumns } from "../list-columns.slint";
+import { ScanProgress } from "../components/scan-progress.slint";
+import { ScrollView } from "std-widgets.slint";
+import { ImageListRow } from "../components/image-row.slint";
+import { Thumbnail } from "../components/thumbnail.slint";
+import { ToolButton, Separator } from "../components/tool-button.slint";
+import { Choice } from "../components/choice.slint";
+import { SegmentedControl } from "../components/segmented-control.slint";
+import { Field } from "../components/field.slint";
+import { Icons } from "../icons.slint";
+import { Theme } from "../theme.slint";
+import { ImageRow, LibraryBand, DateMark } from "../media-types.slint";
+
+export component LibraryPage inherits Rectangle {
+    in property <[ImageRow]> images;
+    in property <[LibraryBand]> bands;
+    in property <[LibraryBand]> visible-bands:root.bands;
+    in property <string> folder;
+    in property <string> status;
+    in property <bool> busy;
+    in property <int> scan-completed;
+    in property <int> scan-total:-1;
+    in property <[DateMark]> date-marks;
+    in property <float> date-cursor;
+    in-out property <int> selected-index: -1;
+    in-out property <bool> grid: true;
+    in-out property <int> group-mode: 1;
+    in-out property <int> type-filter;
+    in-out property <int> rating-filter;
+    in-out property <string> camera-filter;
+    in-out property <string> date-from;
+    in-out property <string> date-to;
+    in-out property <bool> pair-files: true;
+    in property <int> sort-column: 2;
+    in property <bool> sort-descending;
+    private property <length> rail-width: root.group-mode==2 ? 94px : root.group-mode==3 ? 84px : 16px;
+    out property <int> columns: root.grid ? max(1,floor((root.width - root.rail-width - 28px) / 162px)) : 1;
+    out property <float> row-height: root.grid ? (root.width - root.rail-width - 40px - (root.columns - 1) * 12px) / root.columns / 1px + 40 : 44;
+    callback choose-folder();
+    callback settings();
+    callback open-photo(int);
+    callback sort-column-clicked(int);
+    callback apply-filter();
+    callback layout-changed(int,float);
+    callback request-thumbnails(float,float);
+    callback action(string);
+    in-out property <bool> filters-open;
+    private property <int> filter-count: (root.type-filter!=0 ? 1 : 0)+(root.rating-filter!=0 ? 1 : 0)+(root.camera-filter!="" ? 1 : 0)+(root.date-from!="" || root.date-to!="" ? 1 : 0);
+    private property <bool> narrow: root.width<1000px;
+    changed columns => { root.layout-changed(root.columns,root.row-height); }
+    changed row-height => { root.layout-changed(root.columns,root.row-height); }
+    changed grid => { root.layout-changed(root.columns,root.row-height); }
+    changed selected-index => { root.reveal-selection(); }
+    changed bands => { root.request-thumbnails(-image-list.content-y / 1px,image-list.visible-height / 1px); }
+    forward-focus: keys;
+    public function focus-content() { keys.focus(); root.reveal-selection(); }
+    function reveal-selection() {
+        if root.selected-index < 0 || root.selected-index >= root.images.length { return; }
+        let row = root.bands[root.images[root.selected-index].band];
+        if image-list.content-y + row.offset * 1px < 0px { image-list.content-y = -row.offset * 1px; }
+        else if image-list.content-y + (row.offset + row.size) * 1px > image-list.visible-height { image-list.content-y = image-list.visible-height - (row.offset + row.size) * 1px; }
+    }
+    function select-row(index:int) { if root.images.length == 0 || root.busy { return; } root.selected-index = clamp(index,0,root.images.length - 1); keys.focus(); }
+    function move-band(delta:int) {
+        if root.selected-index<0 || root.images.length==0 { root.select-row(0);return; }
+        let band=root.images[root.selected-index].band;
+        let column=root.selected-index - root.bands[band].cells[0].index;
+        let next=root.bands[clamp(band + delta,0,root.bands.length - 1)];
+        root.select-row(next.cells[min(column,next.cells.length - 1)].index);
+    }
+    keys := FocusScope {
+        // Bubble library shortcuts so text fields and dropdowns remain editable.
+        key-pressed(event) => {
+            if event.modifiers.control && (event.text == "o" || event.text == "O") { root.choose-folder(); return accept; }
+            if event.modifiers.control && (event.text == "z" || event.text == "Z") { root.action("undo"); return accept; }
+            if event.text == Key.Delete { root.action("trash"); return accept; }
+            if event.text == Key.UpArrow { root.move-band(-1); return accept; }
+            if event.text == Key.DownArrow { root.move-band(1); return accept; }
+            if event.text == Key.LeftArrow { root.select-row(root.selected-index - 1); return accept; }
+            if event.text == Key.RightArrow { root.select-row(root.selected-index + 1); return accept; }
+            if event.text == Key.Home { root.select-row(0); return accept; }
+            if event.text == Key.End { root.select-row(root.images.length - 1); return accept; }
+            if event.text == Key.PageUp { root.move-band(-max(1,floor(image-list.visible-height / (root.row-height * 1px)))); return accept; }
+            if event.text == Key.PageDown { root.move-band(max(1,floor(image-list.visible-height / (root.row-height * 1px)))); return accept; }
+            if event.text == Key.Return && root.selected-index >= 0 { root.open-photo(root.selected-index); return accept; }
+            return reject;
+        }
+        VerticalLayout {
+            spacing:0px;
+            Rectangle { height:34px;background:Theme.toolbar;
+                HorizontalLayout { y:5px;height:24px;padding-left:12px;padding-right:12px;spacing:2px;
+                    ToolButton { text:"Open folder";icon:Icons.folder;enabled:!root.busy;height:24px;clicked=>{root.choose-folder();} }
+                    Separator { }
+                    ToolButton { text:"Undo trash";icon:Icons.undo;height:24px;clicked=>{root.action("undo");} }
+                    ToolButton { text:"Move rejected…";icon:Icons.move;height:24px;clicked=>{root.action("move-rejected");} }
+                    Rectangle { horizontal-stretch:1; }
+                    ToolButton { text:"Settings";icon:Icons.settings;height:24px;clicked=>{root.settings();} }
+                }
+                Rectangle { y:parent.height - 1px;height:1px;background:Theme.border; }
+            }
+            Rectangle { height:48px;
+                HorizontalLayout { y:10px;height:28px;padding-left:20px;padding-right:20px;spacing:6px;
+                    Text { min-width:0px;horizontal-stretch:1;text:root.folder=="" ? "Open a folder to start browsing" : root.folder;color:Theme.muted;font-size:12px;overflow:elide;vertical-alignment:center; }
+                    SegmentedControl { options:["Grid","List"];icons:[Icons.grid,Icons.list];icon-only:true;current-index:root.grid ? 0 : 1;selected(index)=>{root.grid=index==0;keys.focus();} }
+                    group-selector := Choice { label:"Date grouping";model:["No groups","By day","By month","By year"];current-index <=> root.group-mode;selected(index)=>{root.apply-filter();} }
+                    sort-selector := Choice { label:"Sort order";model:["Type","File","Date taken","Source","Rating"];current-index:root.sort-column;suffix:root.sort-descending ? " ↓" : " ↑";selected(index)=>{root.sort-column-clicked(index);} }
+                    ToolButton { text:root.width<850px ? "Pair RAW" : "RAW + JPEG";icon:Icons.layers;show-icon:root.width>=850px;label:"Pair RAW and JPEG";chip:true;active:root.pair-files;clicked=>{root.pair-files=!root.pair-files;root.apply-filter();} }
+                    Separator { }
+                    ToolButton { text:"Filters" + (root.filter-count>0 ? "  " + root.filter-count : "");label:"Filters";icon:Icons.filter;icon-only:root.width<800px;chip:true;active:root.filters-open || root.filter-count>0;clicked=>{root.filters-open=!root.filters-open;} }
+                }
+                Rectangle { y:parent.height - 1px;height:1px;background:Theme.border; }
+            }
+            if root.filters-open: Rectangle {
+                height:root.narrow ? 84px : 44px;background:Theme.surface;
+                HorizontalLayout { x:20px;y:8px;width:root.narrow ? parent.width - 40px : 510px;height:28px;spacing:6px;
+                    SegmentedControl { options:["All","Photos","Videos","RAW"];label-prefix:"Filter ";current-index <=> root.type-filter; }
+                    rating-filter-input := Choice { label:"Rating filter";model:["Any rating","1★ or more","2★ or more","3★ or more","4★ or more","5★","Rejected"];current-index <=> root.rating-filter;active:root.rating-filter!=0; }
+                    camera-filter-input := Field { placeholder:"Camera";label:"Camera contains";text <=> root.camera-filter;accepted=>{root.apply-filter();} }
+                }
+                HorizontalLayout { x:root.narrow ? 20px : 536px;y:root.narrow ? 48px : 8px;width:parent.width - self.x - 20px;height:28px;spacing:6px;
+                    from-filter := Field { placeholder:"From YYYY-MM-DD";label:"From date";text <=> root.date-from;accepted=>{root.apply-filter();} }
+                    Text { text:"→";color:Theme.muted;vertical-alignment:center; }
+                    to-filter := Field { placeholder:"To YYYY-MM-DD";label:"To date";text <=> root.date-to;accepted=>{root.apply-filter();} }
+                    ToolButton { text:"Reset";clicked=>{root.type-filter=0;root.rating-filter=0;root.camera-filter="";root.date-from="";root.date-to="";root.apply-filter();keys.focus();root.reveal-selection();} }
+                    ToolButton { text:"Apply";primary:true;chip:true;clicked=>{root.apply-filter();keys.focus();root.reveal-selection();} }
+                }
+                Rectangle { y:parent.height - 1px;height:1px;background:Theme.border; }
+            }
+            if !root.grid: Rectangle {
+                height:34px;
+                HorizontalLayout { x:0px;y:3px;height:28px;width:parent.width - root.rail-width;padding-left:20px;padding-right:20px;spacing:16px;
+                    Rectangle { width:44px; }
+                    file-header := ToolButton { text:"FILE"+(root.sort-column==1 ? (root.sort-descending ? " ↓" : " ↑") : "");label:"FILE"+(root.sort-column==1 ? (root.sort-descending ? " descending" : " ascending") : "");active:root.sort-column==1;align-left:true;content-inset:0px;horizontal-stretch:1;clicked=>{root.sort-column-clicked(1);} }
+                    type-header := ToolButton { width:ListColumns.type-width(root.width - root.rail-width - 16px);text:"TYPE"+(root.sort-column==0 ? (root.sort-descending ? " ↓" : " ↑") : "");label:"TYPE"+(root.sort-column==0 ? (root.sort-descending ? " descending" : " ascending") : "");active:root.sort-column==0;align-left:true;content-inset:0px;clicked=>{root.sort-column-clicked(0);} }
+                    date-header := ToolButton { width:ListColumns.date-width(root.width - root.rail-width - 16px);text:"DATE TAKEN"+(root.sort-column==2 ? (root.sort-descending ? " ↓" : " ↑") : "");label:"DATE TAKEN"+(root.sort-column==2 ? (root.sort-descending ? " descending" : " ascending") : "");active:root.sort-column==2;align-left:true;content-inset:0px;clicked=>{root.sort-column-clicked(2);} }
+                    if root.width - root.rail-width>=1016px: source-header := ToolButton { width:ListColumns.source-width(root.width - root.rail-width - 16px);text:"SOURCE"+(root.sort-column==3 ? (root.sort-descending ? " ↓" : " ↑") : "");label:"SOURCE";active:root.sort-column==3;align-left:true;content-inset:0px;clicked=>{root.sort-column-clicked(3);} }
+                    ToolButton { width:80px;text:"RATING"+(root.sort-column==4 ? (root.sort-descending ? " ↓" : " ↑") : "");label:"RATING";active:root.sort-column==4;align-left:true;content-inset:0px;clicked=>{root.sort-column-clicked(4);} }
+                }
+                Rectangle { y:parent.height - 1px;height:1px;background:Theme.border; }
+            }
+            Rectangle { vertical-stretch:1;
+                image-list := ScrollView {
+                    x:root.grid ? 15px : 8px;width:parent.width - root.rail-width - 2 * self.x;height:parent.height;horizontal-scrollbar-policy:always-off;vertical-scrollbar-policy:always-off;
+                    content-width:self.visible-width;
+                    content-height:root.bands.length>0 ? (root.bands[root.bands.length - 1].offset + root.bands[root.bands.length - 1].size) * 1px : 0px;
+                    changed content-y=>{root.request-thumbnails(-self.content-y/1px,self.visible-height/1px);}
+                    changed visible-height=>{root.request-thumbnails(-self.content-y/1px,self.visible-height/1px);}
+                    for band in root.visible-bands: Rectangle {
+                        x:0px;y:band.offset * 1px;width:image-list.visible-width;height:band.size * 1px;
+                        if band.label!="": HorizontalLayout { x:root.grid ? 5px : 12px;y:root.grid ? 16px : 10px;height:18px;spacing:8px;alignment:start;
+                            Text { text:band.label;color:Theme.foreground;font-size:13px;font-weight:600; }
+                            Text { text:band.count;color:Theme.muted;font-size:12px; }
+                        }
+                        HorizontalLayout { y:band.label!="" ? (root.grid ? 42px : 36px) : 0px;height:parent.height - self.y;padding:0px;spacing:root.grid ? 2px : 0px;
+                            for entry in band.cells: Rectangle { min-width:0px;preferred-width:0px;horizontal-stretch:1;
+                                if root.grid: Thumbnail { entry:entry;selected:entry.index==root.selected-index;activated=>{root.selected-index=entry.index;root.open-photo(entry.index);} }
+                                if !root.grid: ImageListRow { image:entry;selected:entry.index==root.selected-index;show-source:root.width - root.rail-width>=1016px;activated=>{root.selected-index=entry.index;root.open-photo(entry.index);} }
+                            }
+                            for gap in max(0,root.columns - band.cells.length): Rectangle { min-width:0px;preferred-width:0px;horizontal-stretch:1; }
+                        }
+                    }
+                }
+                date-rail := DateRail {
+                    x:parent.width - root.rail-width;y:0px;width:root.rail-width;height:parent.height;
+                    marks:root.date-marks;cursor:root.date-cursor;
+                    position:-image-list.content-y / 1px;
+                    content-height:image-list.content-height / 1px;page-height:image-list.visible-height / 1px;
+                    seek(value)=>{image-list.content-y=-value * 1px;}
+                    jump(index,offset)=>{root.select-row(index);image-list.content-y=-clamp(offset,0,max(0,(image-list.content-height - image-list.visible-height)/1px)) * 1px;}
+                }
+                if root.images.length==0 && !root.busy: Text { text:root.folder=="" ? "Open a folder to browse your photos and videos" : "No matching photos or videos";color:Theme.muted;horizontal-alignment:center;vertical-alignment:center; }
+
+            }
+            Rectangle { height:30px;
+                Rectangle { x:0px;y:0px;width:parent.width;height:1px;background:Theme.border; }
+                HorizontalLayout { y:1px;height:29px;padding-left:20px;padding-right:20px;spacing:16px;
+                    Text { text:root.status;color:Theme.muted;font-size:12px;vertical-alignment:center;overflow:elide;min-width:100px; }
+                    Text { min-width:0px;horizontal-stretch:1;text:root.selected-index>=0 ? (root.grid ? root.images[root.selected-index].name+" · "+root.images[root.selected-index].date : root.images[root.selected-index].path) : "";color:Theme.muted;font-size:12px;horizontal-alignment:right;vertical-alignment:center;overflow:elide; }
+                }
+            }
+        }
+    }
+    if root.busy: ScanProgress {
+        completed:root.scan-completed;total:root.scan-total;
+        x:(root.width - self.width)/2;y:root.height - self.height - 46px;
+    }
+
+}

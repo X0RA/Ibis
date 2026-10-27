@@ -1,0 +1,12 @@
+import "../fonts/Inter.ttf";
+import { InfoPanel } from "../components/info-panel.slint";
+export component InfoPanelPreview inherits Window {
+    default-font-family:"Inter";
+    width:900px;height:1200px;
+    HorizontalLayout { spacing:0px;
+        InfoPanel { rating:4;paired:true;details:[{label:"Dimensions",value:"7728 × 5152"},{label:"Size",value:"65.0 MB"},{label:"Camera",value:"Fujifilm X-T5"},{label:"Lens",value:"XF 23mm"},{label:"Shutter",value:"1/250 s"},{label:"GPS",value:"—"},{label:"Path",value:"/Photos/Holiday/Landscape.RAF"}]; }
+        // Video exposes the same R / Rotate action as photos.
+        InfoPanel { video:true;details:[{label:"Duration",value:"0:10"},{label:"Dimensions",value:"1280 × 720"},{label:"Size",value:"1.0 MB"},{label:"Camera",value:"—"},{label:"Path",value:"/Photos/Big_Buck_Bunny.mp4"}]; }
+        InfoPanel { height:360px;rejected:true;details:[{label:"Camera",value:"—"},{label:"Lens",value:"—"},{label:"Path",value:"/a/very/long/path/to/a/photograph/with/no/embedded/exif/metadata.jpg"}]; }
+    }
+}

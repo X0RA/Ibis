@@ -1,0 +1,68 @@
+import { DateMark } from "../media-types.slint";
+import { Theme } from "../theme.slint";
+import { ToolButton } from "tool-button.slint";
+
+export component DateRail inherits Rectangle {
+    in property <[DateMark]> marks;
+    in property <float> cursor;
+    in property <float> position;
+    in property <float> content-height;
+    in property <float> page-height;
+    callback seek(float);
+    callback jump(int,float);
+    private property <float> maximum:max(0,root.content-height - root.page-height);
+    private property <length> track-height:max(0px,root.height - 16px);
+    private property <length> thumb-height:min(root.track-height,max(24px,root.track-height * root.page-height / max(1,root.content-height)));
+    private property <length> travel:root.track-height - root.thumb-height;
+    // Spread sparse markers over the full rail; retain readable spacing when crowded.
+    private property <length> label-step:max(24px,(root.height - 38px)/max(1,root.marks.length - 1));
+    private property <length> label-offset:clamp(8px + root.cursor * root.label-step - (root.height - 22px)/2,0px,max(0px,38px + max(0,root.marks.length - 1) * root.label-step - root.height));
+    clip:true;background:Theme.background;
+    if root.marks.length>0: Rectangle { x:0px;y:0px;width:1px;height:parent.height;background:Theme.border; }
+    wheel := TouchArea {
+        scroll-event(event)=>{root.seek(clamp(root.position - event.delta-y/1px,0,root.maximum));return accept;}
+        for mark[index] in root.marks: ToolButton {
+            x:4px;y:root.marks.length==1 ? (root.height - 22px)/2 : 8px + index * root.label-step - root.label-offset;width:parent.width - 24px;height:22px;
+            text:mark.label;label:"Jump to " + mark.title;
+            active:floor(root.cursor)==index;align-left:true;content-inset:mark.major ? 6px : 16px;
+            opacity:mark.major ? 1 : 0.85;
+            clicked=>{root.jump(mark.index,mark.offset);}
+        }
+        track := Rectangle {
+            x:parent.width - 16px;y:0px;width:16px;height:parent.height;
+            accessible-role:slider;accessible-label:"Library scrollbar";accessible-value:root.position;
+            forward-focus:keys;
+            Rectangle { x:7px;y:8px;width:2px;height:root.track-height;background:Theme.border; }
+            thumb := Rectangle {
+                x:5px;y:8px + (root.maximum>0 ? clamp(root.position/root.maximum,0,1) * root.travel : 0px);
+                width:6px;height:root.thumb-height;border-radius:3px;
+                background:drag.pressed ? Theme.accent : drag.has-hover || keys.has-focus ? Theme.secondary : Theme.disabled;
+                visible:root.maximum>0;
+            }
+            keys := FocusScope {
+                key-pressed(event)=>{
+                    if event.text==Key.UpArrow {root.seek(max(0,root.position - 48));return accept;}
+                    if event.text==Key.DownArrow {root.seek(min(root.maximum,root.position + 48));return accept;}
+                    if event.text==Key.PageUp {root.seek(max(0,root.position - root.page-height));return accept;}
+                    if event.text==Key.PageDown {root.seek(min(root.maximum,root.position + root.page-height));return accept;}
+                    if event.text==Key.Home {root.seek(0);return accept;}
+                    if event.text==Key.End {root.seek(root.maximum);return accept;}
+                    return reject;
+                }
+            }
+            drag := TouchArea {
+                enabled:root.maximum>0;mouse-cursor:pointer;
+                private property <length> grab;
+                function move-thumb() {root.seek(clamp((self.mouse-y - 8px - self.grab)/max(1px,root.travel),0,1) * root.maximum);}
+                pointer-event(event)=>{
+                    if event.button==PointerEventButton.left && event.kind==PointerEventKind.down {
+                        keys.focus();
+                        self.grab=self.mouse-y>=thumb.y && self.mouse-y<=thumb.y + thumb.height ? self.mouse-y - thumb.y : thumb.height/2;
+                        self.move-thumb();
+                    }
+                }
+                moved=>{if self.pressed {self.move-thumb();}}
+            }
+        }
+    }
+}

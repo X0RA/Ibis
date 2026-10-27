@@ -1,0 +1,49 @@
+import { Theme } from "../theme.slint";
+
+export component FolderButton inherits Rectangle {
+    in property <bool> enabled: true;
+    callback clicked();
+    width: 144px;
+    height: 36px;
+    border-radius: 7px;
+    background: !root.enabled ? Theme.surface : touch.pressed ? Theme.button : touch.has-hover ? Theme.button-hover : Theme.button;
+    border-width: 1px;
+    border-color: focus.has-focus ? Theme.accent : #3b5070;
+    opacity: root.enabled ? 1 : 0.45;
+    accessible-role: button;
+    accessible-label: "Open folder";
+    forward-focus: focus;
+
+    folder-icon := Image {
+        x: 18px;
+        y: (parent.height - self.height) / 2;
+        width: 18px;
+        height: 18px;
+        source: @image-url("../images/folder.svg");
+    }
+    Text {
+        x: 44px;
+        y: 0px;
+        width: parent.width - self.x - 14px;
+        height: parent.height;
+        text: "Open folder";
+        color: Theme.foreground;
+        font-size: 13px;
+        vertical-alignment: center;
+    }
+    focus := FocusScope {
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if event.text == " " || event.text == Key.Return {
+                root.clicked();
+                return accept;
+            }
+            return reject;
+        }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { focus.focus(); root.clicked(); }
+    }
+}

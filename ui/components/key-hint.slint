@@ -1,0 +1,15 @@
+import { Theme } from "../theme.slint";
+export component KeyHint inherits Rectangle {
+    in property <[string]> keys;
+    min-width:layout.min-width;preferred-width:layout.preferred-width;horizontal-stretch:0;
+    layout := HorizontalLayout { spacing:3px;alignment:center;
+        for key[index] in root.keys: HorizontalLayout { spacing:3px;
+            if index>0: Text { text:"+";color:Theme.muted;font-size:10px;vertical-alignment:center; }
+            Rectangle { width:caption.preferred-width + 10px;
+                Rectangle { y:(parent.height - 20px)/2;width:parent.width;height:20px;background:Theme.raised;border-radius:3px;border-width:1px;border-color:Theme.control-border;
+                    caption := Text { text:key;color:Theme.secondary;font-size:10px;horizontal-alignment:center;vertical-alignment:center; }
+                }
+            }
+        }
+    }
+}

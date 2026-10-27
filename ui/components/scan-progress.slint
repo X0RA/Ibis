@@ -1,0 +1,11 @@
+import { ProgressIndicator } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+export component ScanProgress inherits Rectangle {
+    in property <int> completed;
+    in property <int> total:-1;
+    private property <float> fraction:root.total<0 ? 0 : root.total==0 ? 1 : clamp(root.completed / root.total,0,1);
+    width:300px;height:52px;
+    background:Theme.raised;border-radius:8px;border-width:1px;border-color:Theme.control-border;
+    Text { x:14px;y:8px;width:parent.width - 28px;height:20px;text:root.total<0 ? "Finding files…" : "Scanning " + root.completed + " / " + root.total + " files · " + floor(root.fraction * 100) + "%";color:Theme.secondary;font-size:12px;horizontal-alignment:center;vertical-alignment:center; }
+    bar := ProgressIndicator { x:14px;y:36px;width:parent.width - 28px;height:4px;progress:root.fraction;accessible-label:"Scanning folder"; }
+}

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ibis
+Comment=Browse photos, camera RAW files and videos
+Exec=ibis %f
+Icon=ibis
+Terminal=false
+Categories=Graphics;Photography;Viewer;
+StartupNotify=true
+MimeType=image/jpeg;image/png;image/webp;image/tiff;image/gif;image/bmp;image/heic;image/heif;image/avif;image/jxl;image/x-canon-cr2;image/x-canon-cr3;image/x-nikon-nef;image/x-sony-arw;image/x-fuji-raf;image/x-adobe-dng;image/x-panasonic-rw2;image/x-olympus-orf;image/x-pentax-pef;video/mp4;video/quicktime;video/x-matroska;video/webm;video/x-msvideo;

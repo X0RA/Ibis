@@ -1,0 +1,16 @@
+import "../fonts/Inter.ttf";
+import { DateRail } from "../components/date-rail.slint";
+import { Theme } from "../theme.slint";
+export component DateRailPreview inherits Window {
+    width:460px;height:400px;background:Theme.background;default-font-family:"Inter";
+    DateRail { x:20px;width:16px;content-height:4000;page-height:400;position:1200; }
+    DateRail { x:80px;width:84px;content-height:4000;page-height:400;position:1200;cursor:1;
+        marks:[{label:"2023",title:"2023",offset:0,major:true},{label:"2024",title:"2024",offset:1000,major:true},{label:"2025",title:"2025",offset:3000,major:true}];
+    }
+    DateRail { x:210px;width:94px;content-height:4000;page-height:400;position:1200;cursor:2;
+        marks:[{label:"2024",title:"2024",offset:0,major:true},{label:"Jan",title:"January 2024",offset:0},{label:"Jun",title:"June 2024",offset:1000},{label:"2025",title:"2025",offset:2000,major:true},{label:"Feb",title:"February 2025",offset:2000}];
+    }
+    DateRail { x:340px;width:84px;content-height:4000;page-height:400;
+        marks:[{label:"2025",title:"2025",offset:0,major:true}];
+    }
+}

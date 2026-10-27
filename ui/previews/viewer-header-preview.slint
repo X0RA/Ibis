@@ -1,0 +1,10 @@
+import "../fonts/Inter.ttf";
+import { ViewerHeader } from "../components/viewer-header.slint";
+import { Theme } from "../theme.slint";
+export component ViewerHeaderPreview inherits Window {
+    default-font-family:"Inter";
+    width:1200px;height:180px;background:Theme.canvas;
+    ViewerHeader { y:0px;width:parent.width;title:"images (1).jpeg";position:"248 / 248";can-previous:true;inspector:true; }
+    ViewerHeader { y:60px;width:parent.width;title:"A long RAW filename from the holiday shoot.NEF";kind:"RAW · paired";position:"2 / 248";can-previous:true;can-next:true;slideshow:true;progress:0.6; }
+    ViewerHeader { y:120px;width:640px;title:"Big_Buck_Bunny_720_10s_1MB.mp4";position:"246 / 248";can-previous:true;can-next:true;inspector:true; }
+}
