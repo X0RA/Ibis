@@ -47,6 +47,7 @@ fn main() {
     let mut build = cc::Build::new();
     build
         .cpp(true)
+        .std("c++11")
         .file("native/raw.cpp")
         .file("native/jpeg.cpp");
     println!("cargo:rerun-if-changed=native/jpeg.cpp");
