@@ -107,5 +107,8 @@ No application LICENSE was present in this checkout; packaging does not invent o
 CI runs formatting, Clippy, debug tests, shell/desktop checks, and a staged Linux
 install/uninstall. Releases retain the copied workflow's automatic patch-tagging
 on main pushes, explicit version/tag support, Linux/Windows/macOS builds, and
-SHA256SUMS. All platform builds must succeed before publishing. No release is
+SHA256SUMS. The resolved release number is written into Cargo.toml/Cargo.lock
+before each platform build and embedded in the binary. Settings and `ibis --version`
+share this value; each release job checks the executable reports the expected version.
+Local builds use the version in Cargo.toml. All platform builds must succeed before publishing. No release is
 published by running local make targets.

@@ -24,6 +24,7 @@ export component LibraryPage inherits Rectangle {
     in property <[DateMark]> date-marks;
     in property <float> date-cursor;
     in-out property <int> selected-index: -1;
+    in-out property <bool> watch-paused: false;
     in-out property <bool> grid: true;
     in-out property <int> group-mode: 1;
     in-out property <int> type-filter;
@@ -91,6 +92,7 @@ export component LibraryPage inherits Rectangle {
             Rectangle { height:34px;background:Theme.toolbar;
                 HorizontalLayout { y:5px;height:24px;padding-left:12px;padding-right:12px;spacing:2px;
                     ToolButton { text:"Open folder";icon:Icons.folder;enabled:!root.busy;height:24px;clicked=>{root.choose-folder();} }
+                    ToolButton { text:root.watch-paused ? "Updates paused" : "Pause updates";label:root.watch-paused ? "Resume folder updates" : "Pause folder updates";icon:root.watch-paused ? Icons.play : Icons.pause;active:root.watch-paused;accessible-checkable:true;accessible-checked:root.watch-paused;enabled:root.folder!="";height:24px;clicked=>{root.watch-paused=!root.watch-paused;keys.focus();} }
                     Separator { }
                     ToolButton { text:"Undo trash";icon:Icons.undo;height:24px;clicked=>{root.action("undo");} }
                     ToolButton { text:"Move rejected…";icon:Icons.move;height:24px;clicked=>{root.action("move-rejected");} }

@@ -739,6 +739,8 @@ pub fn install(
     let mut last_dirty = 0;
     let mut changed_at = Instant::now();
     let mut pending_change = false;
+    let mut was_paused = false;
+    let mut resume_pending = false;
     let mut revision = -1;
     let mut started = Instant::now();
     let mut showing = false;
@@ -802,13 +804,22 @@ pub fn install(
                 changed_at = Instant::now();
                 pending_change = true;
             }
+            let paused = w.get_watch_paused();
+            if was_paused && !paused {
+                // Catch up once, even if the watcher coalesced or dropped events.
+                pending_change = true;
+                resume_pending = true;
+            }
+            was_paused = paused;
             if pending_change
-                && changed_at.elapsed() > Duration::from_millis(700)
+                && !paused
+                && (resume_pending || changed_at.elapsed() > Duration::from_millis(700))
                 && !s.lock().unwrap().scanning
                 && !s.lock().unwrap().metadata_busy
                 && !operation.get()
             {
                 pending_change = false;
+                resume_pending = false;
                 super::start_scan(&w, folder, s.clone());
             }
             if revision != w.get_photo_revision() || showing != w.get_slideshow() {

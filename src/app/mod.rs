@@ -56,6 +56,7 @@ pub fn run(directory: Option<PathBuf>, cache_bytes: usize) -> Result<(), slint::
         .require_opengl()
         .select()?;
     let window = AppWindow::new()?;
+    window.set_app_version(crate::VERSION.into());
     let player = match video::Player::new(&window) {
         Ok(player) => Some(Rc::new(player)),
         Err(error) => {

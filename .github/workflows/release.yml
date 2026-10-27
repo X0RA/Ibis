@@ -115,6 +115,11 @@ jobs:
       - name: Build release binary
         run: cargo build --release --locked
 
+      - name: Verify embedded release version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: test "$(target/release/ibis --version)" = "ibis $VERSION"
+
       - name: Stage Linux binary
         run: |
           mkdir -p dist
@@ -200,6 +205,16 @@ jobs:
           Compress-Archive -Path dist/* -DestinationPath ibis-windows-x86_64.zip
           Move-Item ibis-windows-x86_64.zip dist/
 
+      - name: Verify embedded release version
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          $actual = & .\dist\ibis.exe --version
+          if ($LASTEXITCODE -ne 0 -or $actual -ne "ibis $env:VERSION") {
+            throw "Binary version '$actual' does not match release $env:VERSION"
+          }
+
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y
@@ -258,6 +273,11 @@ jobs:
 
       - name: Build macOS release target
         run: cargo build --release --locked --target aarch64-apple-darwin
+
+      - name: Verify embedded release version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: test "$(target/aarch64-apple-darwin/release/ibis --version)" = "ibis $VERSION"
 
       - name: Build macOS .icns from app icon
         run: |

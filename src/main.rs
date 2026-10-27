@@ -3,6 +3,9 @@ mod cli;
 mod media;
 mod paths;
 
+/// Embedded by Cargo; release CI sets this from the resolved GitHub release.
+pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[cfg(test)]
 pub(crate) fn test_image(relative: &str) -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

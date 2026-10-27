@@ -41,6 +41,7 @@ export component VideoPage inherits Rectangle {
     public function focus-content() { keys.focus(); }
     init => { if root.visible { keys.focus(); } root.viewport-resized(root.texture-width, root.texture-height); }
     changed revision => { if root.visible { keys.focus(); } }
+    hover-area := TouchArea {
     keys := FocusScope {
         capture-key-pressed(event) => {
             if event.text == Key.Escape { root.escape(); return accept; }
@@ -86,6 +87,7 @@ export component VideoPage inherits Rectangle {
             Text { x:18px;y:12px;width:parent.width - 36px;height:parent.height - 24px;text:root.error;color:Theme.danger;wrap:word-wrap;vertical-alignment:center; }
         }
         playback-controls := Rectangle {
+            visible:hover-area.has-hover;
             x:(parent.width - self.width)/2;y:parent.height - self.height - 16px;width:min(720px,parent.width - 32px);height:44px;border-radius:10px;background:#181a1eeb;border-width:1px;border-color:Theme.control-border;
             HorizontalLayout { y:8px;height:28px;padding-left:6px;padding-right:12px;spacing:4px;
                 play-button := ToolButton { icon:root.ended ? Icons.undo : root.paused ? Icons.play : Icons.pause;icon-only:true;label:root.ended ? "Replay" : root.paused ? "Play" : "Pause";enabled:root.error=="";clicked=>{root.pause(root.ended ? false : !root.paused);keys.focus();} }
@@ -99,5 +101,6 @@ export component VideoPage inherits Rectangle {
                 if root.width>=540px: volume-slider := Slider { width:64px;minimum:0;maximum:100;value <=> root.volume;accessible-label:"Video volume";changed(value)=>{root.set-volume(value);} }
             }
         }
+    }
     }
 }

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
 #[command(
-    version,
+    version = crate::VERSION,
     about = "Discover photos and videos recursively and sort them by capture date"
 )]
 pub struct Args {

@@ -1,7 +1,9 @@
 import "../fonts/Inter.ttf";
 import { SettingsPage } from "../pages/settings.slint";
 export component SettingsPreview inherits Window {
-    width:1200px;height:700px;default-font-family:"Inter";
-    SettingsPage { x:0px;width:600px; }
-    SettingsPage { x:600px;width:600px;write-metadata:true;status:"Saved"; }
+    width:1440px;height:800px;default-font-family:"Inter";
+    // Wide inline controls, narrow stacked controls, and a short scrolling error state.
+    SettingsPage { x:0px;width:800px;height:800px;app-version:"0.1.0";change-mode(value)=>{self.write-metadata=value;} }
+    SettingsPage { x:800px;y:0px;width:640px;height:400px;app-version:"12.34.56";write-metadata:true;return-to-viewer:true;change-mode(value)=>{self.write-metadata=value;} }
+    SettingsPage { x:800px;y:400px;width:640px;height:400px;app-version:"0.1.0";enabled:false;status:"Could not save settings: configuration directory is read-only."; }
 }

@@ -16,6 +16,7 @@ export component AppWindow inherits Window {
     in property <bool> write-metadata;
     in property <bool> edit-busy;
     in property <string> settings-status;
+    in property <string> app-version;
     in-out property <bool> settings-open;
     callback change-metadata-mode(bool);
     public function open-settings() {root.settings-open=true;root.slideshow=false;if root.is-video {root.video-pause(true);}}
@@ -32,6 +33,7 @@ export component AppWindow inherits Window {
     in property <float> slide-progress;
     in-out property <bool> info-open: true;
     changed slideshow => { if root.slideshow { root.info-open=false; } }
+    in-out property <bool> watch-paused: false;
     in-out property <bool> grid: true;
     in-out property <int> group-mode: 1;
     in-out property <int> type-filter;
@@ -149,6 +151,7 @@ export component AppWindow inherits Window {
         min-width:0px;min-height:0px;preferred-width:0px;preferred-height:0px;
         max-width:100000px;max-height:100000px;horizontal-stretch:1;vertical-stretch:1;
         bands: root.bands;visible-bands:root.visible-bands; date-marks:root.date-marks;date-cursor:root.date-cursor;
+        watch-paused <=> root.watch-paused;
         grid <=> root.grid; group-mode <=> root.group-mode;
         type-filter <=> root.type-filter; rating-filter <=> root.rating-filter;
         camera-filter <=> root.camera-filter; date-from <=> root.date-from; date-to <=> root.date-to;
@@ -250,6 +253,7 @@ export component AppWindow inherits Window {
     if root.settings-open: SettingsPage {
         x:0px;y:0px;width:parent.width;height:parent.height;
         write-metadata:root.write-metadata;enabled:!root.edit-busy && !root.busy;status:root.settings-status;
+        app-version:root.app-version;return-to-viewer:root.viewer-open;
         change-mode(value)=>{root.change-metadata-mode(value);}close=>{root.close-settings();}
     }
     }

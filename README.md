@@ -13,13 +13,13 @@ ibis works directly with your folders, making it useful for browsing a collectio
 - **Library:** grid or list view, grouped by day, month or year with a scrollable timeline. Sort by name, type, date, source or rating.
 - **Wide format support:** JPEG, PNG, WebP, TIFF, HEIC/AVIF, JPEG XL and camera RAW files (CR2, CR3, NEF, ARW, RAF, DNG and more).
 - **Photo viewer:** zoom, pan, fit or 100%, rotate, and a full quality mode that develops RAWs at full resolution. Nearby photos are preloaded so moving between them is fast.
-- **Video playback:** plays videos in the same window using mpv, with seeking, volume, frame stepping and hardware decoding.
+- **Video playback:** plays videos in the same window using mpv, with seeking, volume, frame stepping and hardware decoding. Controls appear while hovering over the video.
 - **Culling:** star ratings, reject (X), trash with undo, and move all rejected files to another folder in one go.
 - **RAW + JPEG pairing:** shows matching RAW and JPEG files as one item, and **B** switches between them.
 - **Filters:** by media type, rating, camera or date range.
 - **Inspector:** camera, lens, exposure, dimensions, GPS and other metadata.
 - **Slideshow, filmstrip and fullscreen**, plus keyboard shortcuts for almost everything.
-- **Live folder watching:** new, removed and renamed files show up automatically.
+- **Live folder watching:** new, removed and renamed files show up automatically. Pause updates beside Open folder during large copies; resume to refresh.
 - **Optional metadata writing:** save ratings straight into the file's XMP instead of keeping them in the app.
 - **Clipboard and file manager:** copy the image or its path, or show the file in your file manager.
 
@@ -86,7 +86,7 @@ ibis -r ~/Pictures --list  # print the files in date order without opening the G
 ibis --cache-mib 1024      # use a larger photo memory cache (default 256 MiB)
 ```
 
-Run `ibis --help` for all options.
+Run `ibis --help` for all options. **Settings → Version** and `ibis --version` show the embedded app version; release builds use the matching GitHub release number.
 
 In the viewer, **← / →** changes items, **I** toggles the inspector, **R** rotates,
 **X** toggles rejection, and **F / F11** toggles fullscreen. For video, **Space**
