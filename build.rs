@@ -57,10 +57,36 @@ fn main() {
             build.include(path);
         }
     } else {
+        let macos = std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos");
         let lib = pkg_config::Config::new()
             .atleast_version("0.22")
+            .cargo_metadata(!macos)
             .probe("libraw")
             .expect("Install LibRaw 0.22+ development files (libraw / libraw-dev)");
+        if macos {
+            // LibRaw's .pc file can request GNU's stdc++ even on macOS.
+            // Preserve its other linker settings; cc links Apple's libc++ below.
+            for path in &lib.link_paths {
+                println!("cargo:rustc-link-search=native={}", path.display());
+            }
+            for name in &lib.libs {
+                if name != "stdc++" {
+                    println!("cargo:rustc-link-lib={name}");
+                }
+            }
+            for path in &lib.framework_paths {
+                println!("cargo:rustc-link-search=framework={}", path.display());
+            }
+            for name in &lib.frameworks {
+                println!("cargo:rustc-link-lib=framework={name}");
+            }
+            for path in &lib.link_files {
+                println!("cargo:rustc-link-arg={}", path.display());
+            }
+            for args in &lib.ld_args {
+                println!("cargo:rustc-link-arg=-Wl,{}", args.join(","));
+            }
+        }
         for path in lib.include_paths {
             build.include(path);
         }
