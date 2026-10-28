@@ -125,11 +125,6 @@ jobs:
           mkdir -p dist
           cp "target/release/${APP_BIN}" "dist/${APP_BIN}-linux-x86_64"
           chmod +x "dist/${APP_BIN}-linux-x86_64"
-          cp packaging/ibis.desktop dist/ibis.desktop
-          cp ui/assets/appicon.png dist/ibis.png
-          cp scripts/check-linux-deps.sh dist/check-linux-deps.sh
-          cp packaging/README.md dist/linux-dependencies.md
-          ldd "target/release/${APP_BIN}" > dist/linux-linked-libraries.txt
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v7
@@ -137,11 +132,6 @@ jobs:
           name: linux-release
           path: |
             dist/${{ env.APP_BIN }}-linux-x86_64
-            dist/ibis.desktop
-            dist/ibis.png
-            dist/check-linux-deps.sh
-            dist/linux-dependencies.md
-            dist/linux-linked-libraries.txt
           if-no-files-found: error
 
   build-windows:

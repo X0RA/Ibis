@@ -72,10 +72,11 @@ bash scripts/install-linux.sh X0RA/Ibis "$HOME/.local"
 
 The repository defaults to [X0RA/Ibis](https://github.com/X0RA/Ibis); pass another
 `OWNER/REPOSITORY` or set `IBIS_REPO` to install from a fork. The installer downloads
-release assets, checks their SHA-256 checksums, checks system dependencies, and
-installs the binary, launcher, icon and dependency notes. It does not install
-packages or change default file associations. Remove its extra dependency note
-at `PREFIX/share/doc/ibis/linux-dependencies.md` when uninstalling.
+the release binary and verifies its SHA-256 checksum. Runtime dependency checks
+and installation guidance are included in the installer. It fetches the launcher
+and icon from the matching release tag in the repository, then installs them
+alongside the binary. These resources and dependency notes are not separate
+release assets. It does not install packages or change default file associations.
 
 ## macOS (best effort)
 
